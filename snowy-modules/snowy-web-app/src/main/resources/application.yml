@@ -11,10 +11,10 @@ spring:
   cloud:
     nacos:
       config:
-        server-addr: localhost:8848
+        server-addr: ${NACOS_SERVER_ADDR}
         namespace: snowy-cloud-${spring.profiles.active}
         group: ${spring.profiles.active}
         prefix: ${spring.application.name}
         file-extension: yaml
-        username: nacos
-        password: nacos
+        username: ${NACOS_USERNAME}
+        password: ${NACOS_PASSWORD}

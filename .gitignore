@@ -34,3 +34,7 @@ tmp/
 !**/allatori/**
 
 .flattened-pom.xml
+
+# Local deployment files and working documents
+/docs/
+/apache-seata-2.1.0-incubating-bin/
