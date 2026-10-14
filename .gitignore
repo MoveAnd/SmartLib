@@ -38,3 +38,6 @@ tmp/
 # Local deployment files and working documents
 /docs/
 /apache-seata-2.1.0-incubating-bin/
+
+# Local DSH sandbox ACL diagnosis/repair artifacts
+/dsh-acl-recovery/
