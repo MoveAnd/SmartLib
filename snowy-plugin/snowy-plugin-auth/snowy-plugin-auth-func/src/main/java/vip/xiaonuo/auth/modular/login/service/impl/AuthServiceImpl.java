@@ -51,6 +51,7 @@ import vip.xiaonuo.common.exception.CommonException;
 import vip.xiaonuo.common.util.CommonCryptogramUtil;
 import vip.xiaonuo.common.util.CommonEmailUtil;
 import vip.xiaonuo.common.util.CommonOtpUtil;
+import vip.xiaonuo.common.util.CommonPasswordUtil;
 import vip.xiaonuo.common.util.CommonTimeFormatUtil;
 import vip.xiaonuo.dev.api.DevConfigApi;
 import vip.xiaonuo.dev.api.DevEmailApi;
@@ -171,6 +172,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Resource
     private CommonCacheOperator commonCacheOperator;
+
+    @Resource
+    private CommonPasswordUtil commonPasswordUtil;
 
     @Resource
     private SysUserApi sysUserApi;
@@ -496,11 +500,11 @@ public class AuthServiceImpl implements AuthService {
             // 执行校验图形验证码
             validValidCode(null, validCode, validCodeReqNo);
         }
-        // SM2解密并获得前端传来的密码哈希值
-        String passwordHash;
+        // SM2解密获得前端传来的明文密码，直接使用明文进行Argon2id校验
+        String passwordDecrypt;
         try {
-            // 解密，并做哈希值
-            passwordHash = CommonCryptogramUtil.doHashValue(CommonCryptogramUtil.doSm2Decrypt(password));
+            // 解密获得明文密码
+            passwordDecrypt = CommonCryptogramUtil.doSm2Decrypt(password);
         } catch (Exception e) {
             throw new CommonException(AuthExceptionEnum.PWD_DECRYPT_ERROR.getValue());
         }
@@ -511,7 +515,7 @@ public class AuthServiceImpl implements AuthService {
                 // 提示账号错误
                 throw new CommonException(AuthExceptionEnum.ACCOUNT_ERROR.getValue());
             }
-            if (!saBaseLoginUser.getPassword().equals(passwordHash)) {
+            if (!commonPasswordUtil.matches(passwordDecrypt, saBaseLoginUser.getPassword())) {
                 // 密码错误，处理剩余次数提示信息
                 handleRemainingTimes(account, AuthExceptionEnum.PWD_ERROR.getValue(), type);
             }
@@ -523,7 +527,7 @@ public class AuthServiceImpl implements AuthService {
                 // 提示账号错误
                 throw new CommonException(AuthExceptionEnum.ACCOUNT_ERROR.getValue());
             }
-            if (!saBaseClientLoginUser.getPassword().equals(passwordHash)) {
+            if (!commonPasswordUtil.matches(passwordDecrypt, saBaseClientLoginUser.getPassword())) {
                 // 密码错误，处理剩余次数提示信息
                 handleRemainingTimes(account, AuthExceptionEnum.PWD_ERROR.getValue(), type);
             }

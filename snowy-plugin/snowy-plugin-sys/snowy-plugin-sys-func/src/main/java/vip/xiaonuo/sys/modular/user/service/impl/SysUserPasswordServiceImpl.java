@@ -16,7 +16,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
-import vip.xiaonuo.common.util.CommonCryptogramUtil;
+import vip.xiaonuo.common.util.CommonPasswordUtil;
 import vip.xiaonuo.sys.modular.user.entity.SysUserPassword;
 import vip.xiaonuo.sys.modular.user.mapper.SysUserPasswordMapper;
 import vip.xiaonuo.sys.modular.user.service.SysUserPasswordService;
@@ -33,11 +33,24 @@ import java.util.stream.Collectors;
 @Service
 public class SysUserPasswordServiceImpl extends ServiceImpl<SysUserPasswordMapper, SysUserPassword> implements SysUserPasswordService {
 
+    /** 密码工具类 */
+    private final CommonPasswordUtil commonPasswordUtil;
+
+    /**
+     * 构造器注入密码工具类
+     *
+     * @author MoveAnd
+     * @date 2026/02/05
+     **/
+    public SysUserPasswordServiceImpl(CommonPasswordUtil commonPasswordUtil) {
+        this.commonPasswordUtil = commonPasswordUtil;
+    }
+
     @Override
     public void insertUserPasswordHistory(String userId, String newPassword) {
         SysUserPassword sysUserPassword = new SysUserPassword();
         sysUserPassword.setUserId(userId);
-        sysUserPassword.setPassword(CommonCryptogramUtil.doHashValue(newPassword));
+        sysUserPassword.setPassword(commonPasswordUtil.encode(newPassword));
         this.save(sysUserPassword);
     }
 

@@ -200,6 +200,9 @@ public class CommonCryptogramUtil {
     /**
      * 通过杂凑算法取得hash值，用于做数据完整性保护
      *
+     * <p>注意：本方法为通用摘要方法，不可用于密码处理。
+     * 密码的编码与校验请统一使用 {@link CommonPasswordUtil}（Argon2id）。</p>
+     *
      * @author yubaoshan
      * @date 2022/9/15 21:51
      * @param str 字符串

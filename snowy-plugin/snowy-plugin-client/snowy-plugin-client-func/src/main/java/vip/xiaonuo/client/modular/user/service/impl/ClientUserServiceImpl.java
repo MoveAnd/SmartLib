@@ -141,6 +141,12 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
     private CommonCacheOperator commonCacheOperator;
 
     @Resource
+    private CommonPasswordUtil commonPasswordUtil;
+
+    @Resource
+    private ClientPasswordUtl clientPasswordUtl;
+
+    @Resource
     private DevSmsApi devSmsApi;
 
     @Resource
@@ -231,11 +237,11 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
             clientUser.setAvatar(CommonAvatarUtil.generateImg(clientUser.getName()));
         }
         if(ObjectUtil.isEmpty(clientUser.getPassword())) {
-            // 设置默认密码
-            clientUser.setPassword(CommonCryptogramUtil.doHashValue(ClientPasswordUtl.getDefaultPassword()));
+            // 设置默认密码，统一使用Argon2id编码
+            clientUser.setPassword(commonPasswordUtil.encode(clientPasswordUtl.getDefaultPassword()));
         } else {
-            // 设置传入的密码
-            clientUser.setPassword(CommonCryptogramUtil.doHashValue(clientUser.getPassword()));
+            // 设置传入的密码，统一使用Argon2id编码
+            clientUser.setPassword(commonPasswordUtil.encode(clientUser.getPassword()));
         }
         // 设置状态
         clientUser.setUserStatus(ClientUserStatusEnum.ENABLE.getValue());
@@ -571,6 +577,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         return emailValidCodeReqNo;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void findPasswordByPhone(ClientUserFindPwdByPhoneParam clientUserFindPwdByPhoneParam) {
         // 再次校验手机号是否合法
@@ -589,11 +596,11 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         // 获取新密码
         String newPassword = CommonCryptogramUtil.doSm2Decrypt(clientUserFindPwdByPhoneParam.getNewPassword()).trim();
         // 校验新密码
-        ClientPasswordUtl.validNewPassword(clientLoginUser, newPassword);
-        // 修改密码
+        clientPasswordUtl.validNewPassword(clientLoginUser, newPassword);
+        // 修改密码，统一使用Argon2id编码
         this.update(new LambdaUpdateWrapper<ClientUser>().eq(ClientUser::getPhone,
                 CommonCryptogramUtil.doSm4CbcEncrypt(phone)).set(ClientUser::getPassword,
-                CommonCryptogramUtil.doHashValue(newPassword)));
+                commonPasswordUtil.encode(newPassword)));
         // 更新用户最新修改密码时间
         clientUserExtService.updatePasswordLastTime(clientLoginUser.getId());
         // 追加用户历史密码信息
@@ -613,6 +620,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void findPasswordByEmail(ClientUserFindPwdByEmailParam clientUserFindPwdByEmailParam) {
         // 再次校验邮箱是否合法
@@ -631,10 +639,10 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         // 获取新密码
         String newPassword = CommonCryptogramUtil.doSm2Decrypt(clientUserFindPwdByEmailParam.getNewPassword()).trim();
         // 校验新密码
-        ClientPasswordUtl.validNewPassword(clientLoginUser, newPassword);
-        // 修改密码
+        clientPasswordUtl.validNewPassword(clientLoginUser, newPassword);
+        // 修改密码，统一使用Argon2id编码
         this.update(new LambdaUpdateWrapper<ClientUser>().eq(ClientUser::getEmail, email).set(ClientUser::getPassword,
-                CommonCryptogramUtil.doHashValue(newPassword)));
+                commonPasswordUtil.encode(newPassword)));
         // 更新用户最新修改密码时间
         clientUserExtService.updatePasswordLastTime(clientLoginUser.getId());
         // 追加用户历史密码信息
@@ -659,33 +667,35 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
     @Override
     public String updatePasswordGetPhoneValidCode(ClientUserGetPhoneValidCodeParam clientUserGetPhoneValidCodeParam) {
         // 判断密码验证方式
-        ClientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.PHONE.getValue());
+        clientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.PHONE.getValue());
         return this.getPhoneValidCode(clientUserGetPhoneValidCodeParam, "修改密码验证码短信消息模板编码", SNOWY_SMS_TEMPLATE_VALID_CODE_UPDATE_PASSWORD_FOR_C_KEY);
     }
 
     @Override
     public String updatePasswordGetEmailValidCode(ClientUserGetEmailValidCodeParam clientUserGetEmailValidCodeParam) {
         // 判断密码验证方式
-        ClientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.EMAIL.getValue());
+        clientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.EMAIL.getValue());
         return this.getEmailValidCode(clientUserGetEmailValidCodeParam, "修改密码验证码邮件消息模板内容", SNOWY_EMAIL_TEMPLATE_VALID_CODE_UPDATE_PASSWORD_FOR_C_KEY);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updatePasswordByOld(ClientUserUpdatePwdByOldParam clientUserUpdatePwdByOldParam) {
         // 判断密码验证方式
-        ClientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.OLD.getValue());
+        clientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.OLD.getValue());
         ClientUser clientUser = this.queryEntity(StpClientUtil.getLoginIdAsString());
         String password = CommonCryptogramUtil.doSm2Decrypt(clientUserUpdatePwdByOldParam.getPassword()).trim();
         String newPassword = CommonCryptogramUtil.doSm2Decrypt(clientUserUpdatePwdByOldParam.getNewPassword()).trim();
-        if (!CommonCryptogramUtil.doHashValue(password).equals(clientUser.getPassword())) {
+        // 旧密码校验，统一使用Argon2id逐条校验
+        if (!commonPasswordUtil.matches(password, clientUser.getPassword())) {
             throw new CommonException("原密码错误");
         }
         // 校验新密码
-        ClientPasswordUtl.validNewPassword(clientUser, newPassword);
-        // 修改密码
+        clientPasswordUtl.validNewPassword(clientUser, newPassword);
+        // 修改密码，统一使用Argon2id编码
         this.update(new LambdaUpdateWrapper<ClientUser>().eq(ClientUser::getId,
                 clientUser.getId()).set(ClientUser::getPassword,
-                CommonCryptogramUtil.doHashValue(newPassword)));
+                commonPasswordUtil.encode(newPassword)));
         // 更新用户最新修改密码时间
         clientUserExtService.updatePasswordLastTime(clientUser.getId());
         // 追加用户历史密码信息
@@ -741,21 +751,25 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updatePasswordByPhone(ClientUserUpdatePwdByPhoneParam clientUserUpdatePwdByPhoneParam) {
         // 判断密码验证方式
-        ClientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.PHONE.getValue());
+        clientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.PHONE.getValue());
         ClientUserFindPwdByPhoneParam clientUserFindPwdByPhoneParam = new ClientUserFindPwdByPhoneParam();
         BeanUtil.copyProperties(clientUserUpdatePwdByPhoneParam, clientUserFindPwdByPhoneParam);
+        // 注意：这里是类内调用，不经过Spring事务代理，本方法自身的事务注解才是生效的那一个
         this.findPasswordByPhone(clientUserFindPwdByPhoneParam);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updatePasswordByEmail(ClientUserUpdatePwdByEmailParam clientUserUpdatePwdByEmailParam) {
         // 判断密码验证方式
-        ClientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.EMAIL.getValue());
+        clientPasswordUtl.validUpdatePasswordValidType(ClientUpdatePasswordValidTypeEnum.EMAIL.getValue());
         ClientUserFindPwdByEmailParam clientUserFindPwdByEmailParam = new ClientUserFindPwdByEmailParam();
         BeanUtil.copyProperties(clientUserUpdatePwdByEmailParam, clientUserFindPwdByEmailParam);
+        // 注意：这里是类内调用，不经过Spring事务代理，本方法自身的事务注解才是生效的那一个
         this.findPasswordByEmail(clientUserFindPwdByEmailParam);
     }
 
@@ -1080,7 +1094,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
 
     @Override
     public Boolean isUserPasswordExpired() {
-        return ClientPasswordUtl.isUserPasswordExpired(StpClientUtil.getLoginIdAsString());
+        return clientPasswordUtl.isUserPasswordExpired(StpClientUtil.getLoginIdAsString());
     }
 
     @Override
@@ -1124,7 +1138,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         // 密码即将到期邮件消息模板
         String emailTemplateContent = devConfigApi.getValueByKey(SNOWY_EMAIL_TEMPLATE_NOTICE_PASSWORD_EXPIRED_FOR_C_KEY);
         // 获取今日需要提醒密码到期的用户集合
-        ClientPasswordUtl.thisDayPasswordExpiredNeedNoticeUserIdList().forEach(clientUser -> {
+        clientPasswordUtl.thisDayPasswordExpiredNeedNoticeUserIdList().forEach(clientUser -> {
             // 获取手机号
             String phone = clientUser.getPhone();
             // 不为空才发送
@@ -1176,7 +1190,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
             throw new CommonException("账号已存在");
         }
         // 校验密码
-        ClientPasswordUtl.validNewPassword(password);
+        clientPasswordUtl.validNewPassword(password);
         // 根据账号密码创建用户
         this.createUserWithAccount(account, password, null);
     }

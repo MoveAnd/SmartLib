@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import vip.xiaonuo.client.modular.user.entity.ClientUserPassword;
 import vip.xiaonuo.client.modular.user.mapper.ClientUserPasswordMapper;
 import vip.xiaonuo.client.modular.user.service.ClientUserPasswordService;
-import vip.xiaonuo.common.util.CommonCryptogramUtil;
+import vip.xiaonuo.common.util.CommonPasswordUtil;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,11 +33,24 @@ import java.util.stream.Collectors;
 @Service
 public class ClientUserPasswordServiceImpl extends ServiceImpl<ClientUserPasswordMapper, ClientUserPassword> implements ClientUserPasswordService {
 
+    /** 密码工具类 */
+    private final CommonPasswordUtil commonPasswordUtil;
+
+    /**
+     * 构造器注入密码工具类
+     *
+     * @author MoveAnd
+     * @date 2026/02/05
+     **/
+    public ClientUserPasswordServiceImpl(CommonPasswordUtil commonPasswordUtil) {
+        this.commonPasswordUtil = commonPasswordUtil;
+    }
+
     @Override
     public void insertUserPasswordHistory(String userId, String newPassword) {
         ClientUserPassword clientUserPassword = new ClientUserPassword();
         clientUserPassword.setUserId(userId);
-        clientUserPassword.setPassword(CommonCryptogramUtil.doHashValue(newPassword));
+        clientUserPassword.setPassword(commonPasswordUtil.encode(newPassword));
         this.save(clientUserPassword);
     }
 

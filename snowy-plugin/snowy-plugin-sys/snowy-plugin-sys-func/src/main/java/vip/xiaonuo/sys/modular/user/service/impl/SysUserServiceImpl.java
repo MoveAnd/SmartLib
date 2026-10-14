@@ -215,6 +215,12 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private CommonCacheOperator commonCacheOperator;
 
     @Resource
+    private CommonPasswordUtil commonPasswordUtil;
+
+    @Resource
+    private SysPasswordUtil sysPasswordUtil;
+
+    @Resource
     private DevSmsApi devSmsApi;
 
     @Resource
@@ -344,11 +350,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             sysUser.setAvatar(CommonAvatarUtil.generateImg(sysUser.getName()));
         }
         if(ObjectUtil.isEmpty(sysUser.getPassword())) {
-            // 设置默认密码
-            sysUser.setPassword(CommonCryptogramUtil.doHashValue(SysPasswordUtil.getDefaultPassword()));
+            // 设置默认密码，统一使用Argon2id编码
+            sysUser.setPassword(commonPasswordUtil.encode(sysPasswordUtil.getDefaultPassword()));
         } else {
-            // 设置传入的密码
-            sysUser.setPassword(CommonCryptogramUtil.doHashValue(sysUser.getPassword()));
+            // 设置传入的密码，统一使用Argon2id编码
+            sysUser.setPassword(commonPasswordUtil.encode(sysUser.getPassword()));
         }
         // 设置状态
         sysUser.setUserStatus(SysUserStatusEnum.ENABLE.getValue());
@@ -508,11 +514,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         // 获取用户
         SysUser sysUser = this.queryEntity(sysUserIdParam.getId());
         // 获取默认密码
-        String defaultPassword = SysPasswordUtil.getDefaultPassword();
-        // 修改密码
+        String defaultPassword = sysPasswordUtil.getDefaultPassword();
+        // 修改密码，统一使用Argon2id编码
         this.update(new LambdaUpdateWrapper<SysUser>().eq(SysUser::getId,
                 sysUserIdParam.getId()).set(SysUser::getPassword,
-                CommonCryptogramUtil.doHashValue(defaultPassword)));
+                commonPasswordUtil.encode(defaultPassword)));
         // 获取手机号
         String phone = sysUser.getPhone();
         // 手机号不为空则发送密码重置成功短信
@@ -719,6 +725,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         return emailValidCodeReqNo;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void findPasswordByPhone(SysUserFindPwdByPhoneParam sysUserFindPwdByPhoneParam) {
         // 再次校验手机号是否合法
@@ -737,11 +744,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         // 获取新密码
         String newPassword = CommonCryptogramUtil.doSm2Decrypt(sysUserFindPwdByPhoneParam.getNewPassword()).trim();
         // 校验新密码
-        SysPasswordUtil.validNewPassword(sysLoginUser, newPassword);
-        // 修改密码
+        sysPasswordUtil.validNewPassword(sysLoginUser, newPassword);
+        // 修改密码，统一使用Argon2id编码
         this.update(new LambdaUpdateWrapper<SysUser>().eq(SysUser::getPhone,
                 CommonCryptogramUtil.doSm4CbcEncrypt(phone)).set(SysUser::getPassword,
-                CommonCryptogramUtil.doHashValue(newPassword)));
+                commonPasswordUtil.encode(newPassword)));
         // 更新用户最新修改密码时间
         sysUserExtService.updatePasswordLastTime(sysLoginUser.getId());
         // 追加用户历史密码信息
@@ -768,6 +775,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void findPasswordByEmail(SysUserFindPwdByEmailParam sysUserFindPwdByEmailParam) {
         // 再次校验邮箱是否合法
@@ -785,14 +793,15 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         validValidCode(email, sysUserFindPwdByEmailParam.getValidCode(), sysUserFindPwdByEmailParam.getValidCodeReqNo());
         // 获取新密码
         String newPassword = CommonCryptogramUtil.doSm2Decrypt(sysUserFindPwdByEmailParam.getNewPassword()).trim();
+        // 先校验新密码（含历史密码重复检查），校验不通过则直接抛出，不产生任何数据副作用
+        sysPasswordUtil.validNewPassword(sysLoginUser, newPassword);
+        // 修改密码，统一使用Argon2id编码
+        this.update(new LambdaUpdateWrapper<SysUser>().eq(SysUser::getEmail, email).set(SysUser::getPassword,
+                commonPasswordUtil.encode(newPassword)));
         // 更新用户最新修改密码时间
         sysUserExtService.updatePasswordLastTime(sysLoginUser.getId());
         // 追加用户历史密码信息
         sysUserPasswordService.insertUserPasswordHistory(sysLoginUser.getId(), newPassword);
-        SysPasswordUtil.validNewPassword(sysLoginUser, newPassword);
-        // 修改密码
-        this.update(new LambdaUpdateWrapper<SysUser>().eq(SysUser::getEmail, email).set(SysUser::getPassword,
-                CommonCryptogramUtil.doHashValue(newPassword)));
         // 重置密码成功邮件消息模板内容
         String emailTemplateContent = devConfigApi.getValueByKey(SNOWY_EMAIL_TEMPLATE_NOTICE_PASSWORD_RESET_SUCCESS_FOR_B_KEY);
         // 不为空才发送
@@ -817,33 +826,35 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public String updatePasswordGetPhoneValidCode(SysUserGetPhoneValidCodeParam sysUserGetPhoneValidCodeParam) {
         // 判断密码验证方式
-        SysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.PHONE.getValue());
+        sysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.PHONE.getValue());
         return this.getPhoneValidCode(sysUserGetPhoneValidCodeParam, "修改密码验证码短信消息模板编码", SNOWY_SMS_TEMPLATE_VALID_CODE_UPDATE_PASSWORD_FOR_B_KEY);
     }
 
     @Override
     public String updatePasswordGetEmailValidCode(SysUserGetEmailValidCodeParam sysUserGetEmailValidCodeParam) {
         // 判断密码验证方式
-        SysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.EMAIL.getValue());
+        sysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.EMAIL.getValue());
         return this.getEmailValidCode(sysUserGetEmailValidCodeParam, "修改密码验证码邮件消息模板内容", SNOWY_EMAIL_TEMPLATE_VALID_CODE_UPDATE_PASSWORD_FOR_B_KEY);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updatePasswordByOld(SysUserUpdatePwdByOldParam sysUserUpdatePwdByOldParam) {
         // 判断密码验证方式
-        SysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.OLD.getValue());
+        sysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.OLD.getValue());
         SysUser sysUser = this.queryEntity(StpUtil.getLoginIdAsString());
         String password = CommonCryptogramUtil.doSm2Decrypt(sysUserUpdatePwdByOldParam.getPassword()).trim();
         String newPassword = CommonCryptogramUtil.doSm2Decrypt(sysUserUpdatePwdByOldParam.getNewPassword()).trim();
-        if (!CommonCryptogramUtil.doHashValue(password).equals(sysUser.getPassword())) {
+        // 旧密码校验，统一使用Argon2id逐条校验
+        if (!commonPasswordUtil.matches(password, sysUser.getPassword())) {
             throw new CommonException("原密码错误");
         }
         // 校验新密码
-        SysPasswordUtil.validNewPassword(sysUser, newPassword);
-        // 修改密码
+        sysPasswordUtil.validNewPassword(sysUser, newPassword);
+        // 修改密码，统一使用Argon2id编码
         this.update(new LambdaUpdateWrapper<SysUser>().eq(SysUser::getId,
                 sysUser.getId()).set(SysUser::getPassword,
-                CommonCryptogramUtil.doHashValue(newPassword)));
+                commonPasswordUtil.encode(newPassword)));
         // 更新用户最新修改密码时间
         sysUserExtService.updatePasswordLastTime(sysUser.getId());
         // 追加用户历史密码信息
@@ -899,21 +910,25 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updatePasswordByPhone(SysUserUpdatePwdByPhoneParam sysUserUpdatePwdByPhoneParam) {
         // 判断密码验证方式
-        SysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.PHONE.getValue());
+        sysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.PHONE.getValue());
         SysUserFindPwdByPhoneParam sysUserFindPwdByPhoneParam = new SysUserFindPwdByPhoneParam();
         BeanUtil.copyProperties(sysUserUpdatePwdByPhoneParam, sysUserFindPwdByPhoneParam);
+        // 注意：这里是类内调用，不经过Spring事务代理，本方法自身的事务注解才是生效的那一个
         this.findPasswordByPhone(sysUserFindPwdByPhoneParam);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updatePasswordByEmail(SysUserUpdatePwdByEmailParam sysUserUpdatePwdByEmailParam) {
         // 判断密码验证方式
-        SysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.EMAIL.getValue());
+        sysPasswordUtil.validUpdatePasswordValidType(SysUpdatePasswordValidTypeEnum.EMAIL.getValue());
         SysUserFindPwdByEmailParam sysUserFindPwdByEmailParam = new SysUserFindPwdByEmailParam();
         BeanUtil.copyProperties(sysUserUpdatePwdByEmailParam, sysUserFindPwdByEmailParam);
+        // 注意：这里是类内调用，不经过Spring事务代理，本方法自身的事务注解才是生效的那一个
         this.findPasswordByEmail(sysUserFindPwdByEmailParam);
     }
 
@@ -1768,8 +1783,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                     sysUser.setId(IdWorker.getIdStr());
                     // 设置默认头像
                     sysUser.setAvatar(CommonAvatarUtil.generateImg(sysUser.getName()));
-                    // 设置默认密码
-                    sysUser.setPassword(CommonCryptogramUtil.doHashValue(SysPasswordUtil.getDefaultPassword()));
+                    // 设置默认密码，统一使用Argon2id编码
+                    sysUser.setPassword(commonPasswordUtil.encode(sysPasswordUtil.getDefaultPassword()));
                     // 设置排序码
                     sysUser.setSortCode(99);
                     // 设置状态
@@ -2408,7 +2423,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public Boolean isUserPasswordExpired() {
-        return SysPasswordUtil.isUserPasswordExpired(StpUtil.getLoginIdAsString());
+        return sysPasswordUtil.isUserPasswordExpired(StpUtil.getLoginIdAsString());
     }
 
     @Override
@@ -2418,7 +2433,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         // 密码即将到期邮件消息模板
         String emailTemplateContent = devConfigApi.getValueByKey(SNOWY_EMAIL_TEMPLATE_NOTICE_PASSWORD_EXPIRED_FOR_B_KEY);
         // 获取今日需要提醒密码到期的用户集合
-        SysPasswordUtil.thisDayPasswordExpiredNeedNoticeUserIdList().forEach(sysUser -> {
+        sysPasswordUtil.thisDayPasswordExpiredNeedNoticeUserIdList().forEach(sysUser -> {
             // 获取手机号
             String phone = sysUser.getPhone();
             // 不为空才发送
@@ -2470,14 +2485,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new CommonException("账号已存在");
         }
         // 校验密码
-        SysPasswordUtil.validNewPassword(password);
+        sysPasswordUtil.validNewPassword(password);
         // 根据账号密码创建用户
         this.createUserWithAccount(account, password, null);
     }
 
     @Override
     public JSONObject getUpdatePasswordValidConfig() {
-        return SysPasswordUtil.getUpdatePasswordValidConfig();
+        return sysPasswordUtil.getUpdatePasswordValidConfig();
     }
 
     @Override

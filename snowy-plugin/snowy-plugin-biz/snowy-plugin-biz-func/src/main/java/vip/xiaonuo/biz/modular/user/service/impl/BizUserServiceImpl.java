@@ -100,6 +100,9 @@ public class BizUserServiceImpl extends ServiceImpl<BizUserMapper, BizUser> impl
     private TransService transService;
 
     @Resource
+    private CommonPasswordUtil commonPasswordUtil;
+
+    @Resource
     private SysApi sysApi;
 
     @Resource
@@ -164,8 +167,8 @@ public class BizUserServiceImpl extends ServiceImpl<BizUserMapper, BizUser> impl
             // 设置默认头像
             bizUser.setAvatar(CommonAvatarUtil.generateImg(bizUser.getName()));
         }
-        // 设置密码
-        bizUser.setPassword(CommonCryptogramUtil.doHashValue(sysApi.getDefaultPassword()));
+        // 设置密码，统一使用Argon2id编码
+        bizUser.setPassword(commonPasswordUtil.encode(sysApi.getDefaultPassword()));
         // 设置状态
         bizUser.setUserStatus(BizUserStatusEnum.ENABLE.getValue());
         // 保存用户
@@ -395,7 +398,7 @@ public class BizUserServiceImpl extends ServiceImpl<BizUserMapper, BizUser> impl
         }
         this.update(new LambdaUpdateWrapper<BizUser>().eq(BizUser::getId,
                 bizUserIdParam.getId()).set(BizUser::getPassword,
-                CommonCryptogramUtil.doHashValue(sysApi.getDefaultPassword())));
+                commonPasswordUtil.encode(sysApi.getDefaultPassword())));
     }
 
     @Override

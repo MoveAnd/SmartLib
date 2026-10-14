@@ -19,12 +19,13 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.pinyin.PinyinUtil;
-import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 import vip.xiaonuo.auth.core.pojo.SysLoginUser;
 import vip.xiaonuo.common.exception.CommonException;
-import vip.xiaonuo.common.util.CommonCryptogramUtil;
+import vip.xiaonuo.common.util.CommonPasswordUtil;
 import vip.xiaonuo.dev.api.DevConfigApi;
 import vip.xiaonuo.dev.api.DevWeakPasswordApi;
 import vip.xiaonuo.sys.core.enums.SysPasswordComplexityEnum;
@@ -41,10 +42,53 @@ import java.util.stream.Collectors;
 /**
  * 系统密码工具类
  *
+ * <p>本类是 Spring Bean：原先通过 {@code SpringUtil.getBean} 在方法内取用的配置与数据服务，
+ * 改为构造期依赖注入，方法随之由静态改为实例方法。</p>
+ *
+ * <p>对 {@code SysUserService} 使用 {@link Lazy} 延迟注入：本类被 {@code SysUserServiceImpl} 依赖，
+ * 而本类又需要用户服务（密码过期判断、到期提醒），直接构造注入会形成循环依赖；
+ * 延迟注入把解析推迟到首次使用时，从而消除创建顺序依赖。</p>
+ *
  * @author xuyuxiang
  * @date 2025/3/21 19:07
  **/
+@Component
 public class SysPasswordUtil {
+
+    /** 配置接口 */
+    private final DevConfigApi devConfigApi;
+
+    /** 弱密码库接口 */
+    private final DevWeakPasswordApi devWeakPasswordApi;
+
+    /** 密码工具类（Argon2id编码与校验） */
+    private final CommonPasswordUtil commonPasswordUtil;
+
+    /** 用户密码服务 */
+    private final SysUserPasswordService sysUserPasswordService;
+
+    /** 用户服务，延迟注入以消除与 SysUserServiceImpl 的循环依赖 */
+    private final SysUserService sysUserService;
+
+    /** 用户扩展服务 */
+    private final SysUserExtService sysUserExtService;
+
+    /**
+     * 构造器注入依赖
+     *
+     * @author xuyuxiang
+     * @date 2025/3/21 19:07
+     **/
+    public SysPasswordUtil(DevConfigApi devConfigApi, DevWeakPasswordApi devWeakPasswordApi,
+                           CommonPasswordUtil commonPasswordUtil, SysUserPasswordService sysUserPasswordService,
+                           @Lazy SysUserService sysUserService, SysUserExtService sysUserExtService) {
+        this.devConfigApi = devConfigApi;
+        this.devWeakPasswordApi = devWeakPasswordApi;
+        this.commonPasswordUtil = commonPasswordUtil;
+        this.sysUserPasswordService = sysUserPasswordService;
+        this.sysUserService = sysUserService;
+        this.sysUserExtService = sysUserExtService;
+    }
 
     /** B端系统默认密码 */
     private static final String SNOWY_SYS_DEFAULT_PASSWORD_FOR_B_KEY = "SNOWY_SYS_DEFAULT_PASSWORD_FOR_B";
@@ -91,8 +135,7 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static String getDefaultPassword() {
-        DevConfigApi devConfigApi = SpringUtil.getBean(DevConfigApi.class);
+    public String getDefaultPassword() {
         String defaultPassword = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_FOR_B_KEY);
         if(ObjectUtil.isEmpty(defaultPassword)){
             throw new CommonException("请联系管理员配置系统默认密码");
@@ -106,9 +149,8 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static JSONObject getUpdatePasswordValidConfig() {
+    public JSONObject getUpdatePasswordValidConfig() {
         JSONObject jsonObject = new JSONObject();
-        DevConfigApi devConfigApi = SpringUtil.getBean(DevConfigApi.class);
         // 修改密码验证方式
         String passwordUpdateValidType = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_UPDATE_VALID_TYPE_FOR_B_KEY);
         if(ObjectUtil.isEmpty(passwordUpdateValidType)){
@@ -148,8 +190,7 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static String getUpdatePasswordValidType() {
-        DevConfigApi devConfigApi = SpringUtil.getBean(DevConfigApi.class);
+    public String getUpdatePasswordValidType() {
         String passwordUpdateValidType = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_UPDATE_VALID_TYPE_FOR_B_KEY);
         if(ObjectUtil.isEmpty(passwordUpdateValidType)){
             throw new CommonException("请联系管理员配置系统密码修改验证方式");
@@ -163,7 +204,7 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static void validUpdatePasswordValidType(String type) {
+    public void validUpdatePasswordValidType(String type) {
         String updatePasswordValidType = getUpdatePasswordValidType();
         if(!updatePasswordValidType.equals(type)){
             throw new CommonException("系统配置不支持此方式修改密码");
@@ -176,7 +217,7 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static void validNewPassword(SysLoginUser sysLoginUser, String newPassword) {
+    public void validNewPassword(SysLoginUser sysLoginUser, String newPassword) {
         String userId = sysLoginUser.getId();
         String account = sysLoginUser.getAccount();
         String name = sysLoginUser.getName();
@@ -192,7 +233,7 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static void validNewPassword(SysUser sysUser, String newPassword) {
+    public void validNewPassword(SysUser sysUser, String newPassword) {
         String userId = sysUser.getId();
         String account = sysUser.getAccount();
         String name = sysUser.getName();
@@ -208,8 +249,7 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static void validNewPassword(String newPassword) {
-        DevConfigApi devConfigApi = SpringUtil.getBean(DevConfigApi.class);
+    public void validNewPassword(String newPassword) {
         // 密码最小长度
         String passwordMinLength = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_MIN_LENGTH_FOR_B_KEY);
         if(ObjectUtil.isNotEmpty(passwordMinLength)){
@@ -279,7 +319,6 @@ public class SysPasswordUtil {
         if(ObjectUtil.isNotEmpty(passwordNotAllowUseWeakFlag)){
             if(Convert.toBool(passwordNotAllowUseWeakFlag)){
                 // 不能包含内置弱密码和自定义额外弱密码库中密码
-                DevWeakPasswordApi devWeakPasswordApi = SpringUtil.getBean(DevWeakPasswordApi.class);
                 List<String> weakPasswordList = devWeakPasswordApi.weakPasswordList();
                 // 获取自定义额外弱密码库
                 String passwordDefineWeakDatabase = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_DEFINE_WEAK_DATABASE_FOR_B_KEY);
@@ -299,8 +338,8 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static void validNewPassword(String userId, String account, String name, String phone, String email, String newPassword) {
-        DevConfigApi devConfigApi = SpringUtil.getBean(DevConfigApi.class);
+    public void validNewPassword(String userId, String account, String name, String phone, String email,
+                                        String newPassword) {
         // 密码不能包含用户信息开关
         String passwordNotAllowContainsUserInfoFlag = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_NOT_ALLOW_CONTAINS_USER_INFO_FLAG_FOR_B_KEY);
         if(ObjectUtil.isNotEmpty(passwordNotAllowContainsUserInfoFlag)){
@@ -332,10 +371,10 @@ public class SysPasswordUtil {
                 if(ObjectUtil.isNotEmpty(passwordNotAllowContainsHistoryCount)){
                     Integer passwordNotAllowContainsHistoryCountInt = Convert.toInt(passwordNotAllowContainsHistoryCount);
                     // 取前N次密码，进行判断
-                    SysUserPasswordService sysUserPasswordService = SpringUtil.getBean(SysUserPasswordService.class);
                     List<String> userPasswordHistoryLimit = sysUserPasswordService.getUserPasswordHistoryLimit(userId, passwordNotAllowContainsHistoryCountInt);
                     if(ObjectUtil.isNotEmpty(userPasswordHistoryLimit)){
-                        if(userPasswordHistoryLimit.contains(CommonCryptogramUtil.doHashValue(newPassword))) {
+                        // 历史密码编码因随机盐各不相同，必须逐条使用Argon2id校验，不可比较编码串
+                        if(commonPasswordUtil.matchesAny(newPassword, userPasswordHistoryLimit)) {
                             throw new CommonException("密码不可包含历史密码");
                         }
                     }
@@ -350,23 +389,20 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static boolean isUserPasswordExpired(String userId) {
+    public boolean isUserPasswordExpired(String userId) {
         // 先判断是否系统默认密码
-        SysUserService sysUserService = SpringUtil.getBean(SysUserService.class);
         SysUser sysUser = sysUserService.queryEntity(userId);
         String defaultPassword = getDefaultPassword();
         // 若是，则认为已过期，需要修改
-        if(CommonCryptogramUtil.doHashValue(defaultPassword).equals(sysUser.getPassword())){
+        if(commonPasswordUtil.matches(defaultPassword, sysUser.getPassword())){
             return true;
         }
-        SysUserExtService sysUserExtService = SpringUtil.getBean(SysUserExtService.class);
         // 获取用户扩展信息
         SysUserExt sysUserExt = sysUserExtService.getOne(new LambdaQueryWrapper<SysUserExt>().eq(SysUserExt::getUserId, userId));
         if(ObjectUtil.isEmpty(sysUserExt)){
             // 无扩展信息的，直接认定为密码过期
             return true;
         } else {
-            DevConfigApi devConfigApi = SpringUtil.getBean(DevConfigApi.class);
             // 获取密码有效期天数
             String passwordExpiredDays = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_EXPIRED_DAYS_FOR_B_KEY);
             if(ObjectUtil.isEmpty(passwordExpiredDays)){
@@ -386,9 +422,8 @@ public class SysPasswordUtil {
      * @author xuyuxiang
      * @date 2025/3/21 19:08
      **/
-    public static List<SysUser> thisDayPasswordExpiredNeedNoticeUserIdList() {
+    public List<SysUser> thisDayPasswordExpiredNeedNoticeUserIdList() {
         List<SysUser> resultUserList = new ArrayList<>();
-        DevConfigApi devConfigApi = SpringUtil.getBean(DevConfigApi.class);
         // 获取密码有效期天数
         String passwordExpiredDays = devConfigApi.getValueByKey(SNOWY_SYS_DEFAULT_PASSWORD_EXPIRED_DAYS_FOR_B_KEY);
         // 密码有效期配置如果不为空
@@ -408,14 +443,12 @@ public class SysPasswordUtil {
                     // 获取当天的结束时间
                     DateTime endDay = DateUtil.endOfDay(passWordUpdateTime);
                     // 获取SysUserExtService
-                    SysUserExtService sysUserExtService = SpringUtil.getBean(SysUserExtService.class);
                     // 查询密码修改日期在该范围内的（无修改密码历史（即扩展信息为空）的无需提醒，会强制修改密码）
                     List<String> userIdList = sysUserExtService.list(new LambdaQueryWrapper<SysUserExt>()
                                     .between(SysUserExt::getPasswordUpdateTime,beginDay, endDay)).stream()
                             .map(SysUserExt::getUserId).collect(Collectors.toList());
                     if(ObjectUtil.isNotEmpty(userIdList)){
                         // 获取SysUserXService
-                        SysUserService sysUserService = SpringUtil.getBean(SysUserService.class);
                         resultUserList = sysUserService.listByIds(userIdList);
                     }
                 }

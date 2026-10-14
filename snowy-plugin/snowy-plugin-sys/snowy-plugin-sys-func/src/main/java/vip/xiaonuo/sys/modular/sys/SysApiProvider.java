@@ -1,5 +1,6 @@
 package vip.xiaonuo.sys.modular.sys;
 
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import vip.xiaonuo.sys.api.SysApi;
 import vip.xiaonuo.sys.core.util.SysPasswordUtil;
@@ -13,8 +14,11 @@ import vip.xiaonuo.sys.core.util.SysPasswordUtil;
 @Service
 public class SysApiProvider implements SysApi {
 
+    @Resource
+    private SysPasswordUtil sysPasswordUtil;
+
     @Override
     public String getDefaultPassword() {
-        return SysPasswordUtil.getDefaultPassword();
+        return sysPasswordUtil.getDefaultPassword();
     }
 }
