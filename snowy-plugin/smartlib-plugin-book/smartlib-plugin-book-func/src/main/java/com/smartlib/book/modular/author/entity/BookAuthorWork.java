@@ -14,8 +14,9 @@ import vip.xiaonuo.common.pojo.CommonEntity;
 @Getter
 @Setter
 @TableName("author_works")
-public class AuthorWork extends CommonEntity {
+public class BookAuthorWork extends CommonEntity {
 
+    /** 序列化版本号 */
     private static final long serialVersionUID = 1L;
 
     /** 作者标识，逻辑关联 authors.key；联合主键之一 */

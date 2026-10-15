@@ -18,8 +18,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @TableName(value = "editions", autoResultMap = true)
-public class Edition extends CommonEntity {
+public class BookEdition extends CommonEntity {
 
+    /** 序列化版本号 */
     private static final long serialVersionUID = 1L;
 
     /** 来源类型，如 /type/edition */

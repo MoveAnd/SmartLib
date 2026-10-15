@@ -84,6 +84,7 @@ public class GatewayConfigure {
             "/v3/api-docs/**",
             "/api/webapp/v3/api-docs/**",
             "/api/bizapp/v3/api-docs/**",
+            "/api/bookapp/v3/api-docs/**",
             "/configuration/ui",
             "/configuration/security",
             "/ureport/**",

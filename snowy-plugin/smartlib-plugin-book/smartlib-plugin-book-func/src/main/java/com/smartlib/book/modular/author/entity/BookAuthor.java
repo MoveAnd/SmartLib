@@ -1,4 +1,4 @@
-package com.smartlib.book.modular.work.entity;
+package com.smartlib.book.modular.author.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -13,20 +13,21 @@ import vip.xiaonuo.common.pojo.CommonEntity;
 import java.time.LocalDateTime;
 
 /**
- * Open Library 作品。
+ * Open Library 作者。
  */
 @Getter
 @Setter
-@TableName(value = "works", autoResultMap = true)
-public class Work extends CommonEntity {
+@TableName(value = "authors", autoResultMap = true)
+public class BookAuthor extends CommonEntity {
 
+    /** 序列化版本号 */
     private static final long serialVersionUID = 1L;
 
-    /** 来源类型，如 /type/work */
+    /** 来源类型，如 /type/author */
     @TableField(value = "type")
     private String type;
 
-    /** 作品完整 OL 标识；key 是 MySQL 保留字，需反引号转义 */
+    /** 作者完整 OL 标识；key 是 MySQL 保留字，需反引号转义 */
     @TableId(value = "`key`", type = IdType.INPUT)
     private String key;
 
@@ -38,11 +39,11 @@ public class Work extends CommonEntity {
     @TableField(value = "last_modified")
     private LocalDateTime lastModified;
 
-    /** 完整来源作品对象；默认不加载，按需显式查询 */
+    /** 完整来源作者对象；默认不加载，按需显式查询 */
     @TableField(value = "data", typeHandler = JacksonTypeHandler.class, select = false)
     private JsonNode data;
 
-    /** 从 data.title 提取的作品标题，供展示和搜索 */
-    @TableField(value = "title")
-    private String title;
+    /** 从 data.name 提取的姓名，供展示和搜索 */
+    @TableField(value = "name")
+    private String name;
 }

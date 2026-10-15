@@ -14,8 +14,9 @@ import vip.xiaonuo.common.pojo.CommonEntity;
 @Getter
 @Setter
 @TableName("edition_isbns")
-public class EditionIsbn extends CommonEntity {
+public class BookEditionIsbn extends CommonEntity {
 
+    /** 序列化版本号 */
     private static final long serialVersionUID = 1L;
 
     /** 版本标识，逻辑关联 editions.key；联合主键之一 */

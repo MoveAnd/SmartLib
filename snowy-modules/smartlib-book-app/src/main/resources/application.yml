@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: smartlib-book-app
+  profiles:
+    active: dev
+  config:
+    import:
+      - optional:nacos:${spring.application.name}-${spring.profiles.active}.yaml
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_SERVER_ADDR}
+        namespace: snowy-cloud-dev
+        group: dev
+        username: ${NACOS_USERNAME}
+        password: ${NACOS_PASSWORD}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR}
+        namespace: snowy-cloud-dev
+        group: dev
+        username: ${NACOS_USERNAME}
+        password: ${NACOS_PASSWORD}

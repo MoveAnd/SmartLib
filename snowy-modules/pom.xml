@@ -21,6 +21,9 @@
 
         <!-- 业务应用启动组件 -->
         <module>snowy-biz-app</module>
+
+        <!-- 图书服务启动组件 -->
+        <module>smartlib-book-app</module>
     </modules>
 
 </project>
