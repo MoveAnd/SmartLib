@@ -11,8 +11,11 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import vip.xiaonuo.auth.core.util.StpClientUtil;
 import vip.xiaonuo.common.enums.CommonDeleteFlagEnum;
+import vip.xiaonuo.common.interceptor.CommonTraceInterceptor;
 import vip.xiaonuo.common.pojo.CommonEntity;
 
 import java.util.Date;
@@ -22,7 +25,7 @@ import java.util.Date;
  */
 @Configuration(proxyBeanMethods = false)
 @MapperScan("com.smartlib.book.modular.*.mapper")
-public class GlobalConfigure {
+public class GlobalConfigure implements WebMvcConfigurer {
 
     /** 按框架约定填充公共审计字段，未获取到登录身份时使用-1。 */
     @Component
@@ -78,5 +81,11 @@ public class GlobalConfigure {
                     .setLogicNotDeleteValue(CommonDeleteFlagEnum.NOT_DELETE.name())
                     .setLogicDeleteValue(CommonDeleteFlagEnum.DELETED.name());
         };
+    }
+
+    /** 注册请求链路追踪，统一生成或沿用traceId。 */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new CommonTraceInterceptor()).addPathPatterns("/**");
     }
 }
