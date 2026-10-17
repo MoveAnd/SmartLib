@@ -6,12 +6,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.smartlib.book.modular.author.convert.BookAuthorConvert;
 import com.smartlib.book.modular.author.entity.BookAuthor;
 import com.smartlib.book.modular.author.mapper.BookAuthorMapper;
 import com.smartlib.book.modular.author.param.BookAuthorPageParam;
 import com.smartlib.book.modular.author.result.BookAuthorDetailResult;
 import com.smartlib.book.modular.author.result.BookAuthorSummaryResult;
 import com.smartlib.book.modular.author.service.BookAuthorService;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
@@ -23,6 +25,9 @@ import java.util.List;
 /** 作者查询服务实现。 */
 @Service
 public class BookAuthorServiceImpl extends ServiceImpl<BookAuthorMapper, BookAuthor> implements BookAuthorService {
+
+    @Resource
+    private BookAuthorConvert bookAuthorConvert;
 
     @Override
     public Page<BookAuthorSummaryResult> page(BookAuthorPageParam param) {
@@ -57,12 +62,7 @@ public class BookAuthorServiceImpl extends ServiceImpl<BookAuthorMapper, BookAut
         bookAuthorPage = this.page(bookAuthorPage, queryWrapper);
         Page<BookAuthorSummaryResult> resultPage = new Page<>(bookAuthorPage.getCurrent(), bookAuthorPage.getSize(),
                 bookAuthorPage.getTotal());
-        resultPage.setRecords(bookAuthorPage.getRecords().stream().map(bookAuthor -> {
-            BookAuthorSummaryResult result = new BookAuthorSummaryResult();
-            result.setKey(bookAuthor.getKey());
-            result.setName(bookAuthor.getName());
-            return result;
-        }).toList());
+        resultPage.setRecords(bookAuthorConvert.toSummaries(bookAuthorPage.getRecords()));
         return resultPage;
     }
 
@@ -76,9 +76,7 @@ public class BookAuthorServiceImpl extends ServiceImpl<BookAuthorMapper, BookAut
         if (ObjectUtil.isEmpty(bookAuthor)) {
             throw new CommonException("作者不存在，key值为：{}", key);
         }
-        BookAuthorDetailResult result = new BookAuthorDetailResult();
-        result.setKey(bookAuthor.getKey());
-        result.setName(bookAuthor.getName());
+        BookAuthorDetailResult result = bookAuthorConvert.toDetail(bookAuthor);
         JsonNode data = bookAuthor.getData();
         if (data == null || !data.isObject()) {
             return result;
