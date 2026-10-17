@@ -93,6 +93,15 @@ public class GatewayConfigure {
             /* 移动端静态资源 */
             "/api/webapp/images/**",
 
+            /* 公开书目查询 */
+            "/api/bookapp/book/work/page",
+            "/api/bookapp/book/work/detail",
+            "/api/bookapp/book/author/page",
+            "/api/bookapp/book/author/detail",
+            "/api/bookapp/book/edition/page",
+            "/api/bookapp/book/edition/detail",
+            "/api/bookapp/book/edition/byIsbn",
+
             /* 认证相关 */
             "/api/webapp/auth/c/getPicCaptcha",
             "/api/webapp/auth/c/getPhoneValidCode",
