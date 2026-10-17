@@ -6,8 +6,10 @@ import com.smartlib.book.modular.edition.param.BookEditionIsbnParam;
 import com.smartlib.book.modular.edition.param.BookEditionPageParam;
 import com.smartlib.book.modular.edition.result.BookEditionDetailResult;
 import com.smartlib.book.modular.edition.result.BookEditionSummaryResult;
+import com.smartlib.book.modular.edition.service.BookEditionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,21 +23,24 @@ import java.util.List;
 @Validated
 public class BookEditionController {
 
+    @Resource
+    private BookEditionService bookEditionService;
+
     @Operation(summary = "作品下的版本分页列表")
     @GetMapping("/book/edition/page")
     public CommonResult<Page<BookEditionSummaryResult>> page(@Valid BookEditionPageParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+        return CommonResult.data(bookEditionService.page(param));
     }
 
     @Operation(summary = "出版版本详情")
     @GetMapping("/book/edition/detail")
     public CommonResult<BookEditionDetailResult> detail(@Valid BookEditionKeyParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+        return CommonResult.data(bookEditionService.detail(param.getKey()));
     }
 
     @Operation(summary = "通过ISBN查询版本列表")
     @GetMapping("/book/edition/byIsbn")
     public CommonResult<List<BookEditionSummaryResult>> byIsbn(@Valid BookEditionIsbnParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+        return CommonResult.data(bookEditionService.byIsbn(param.getIsbn()));
     }
 }

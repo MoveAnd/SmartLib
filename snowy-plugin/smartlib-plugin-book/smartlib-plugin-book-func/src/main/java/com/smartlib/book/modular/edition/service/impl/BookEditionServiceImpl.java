@@ -1,0 +1,147 @@
+package com.smartlib.book.modular.edition.service.impl;
+
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.smartlib.book.modular.edition.convert.BookEditionConvert;
+import com.smartlib.book.modular.edition.entity.BookEdition;
+import com.smartlib.book.modular.edition.entity.BookEditionIsbn;
+import com.smartlib.book.modular.edition.mapper.BookEditionIsbnMapper;
+import com.smartlib.book.modular.edition.mapper.BookEditionMapper;
+import com.smartlib.book.modular.edition.param.BookEditionPageParam;
+import com.smartlib.book.modular.edition.result.BookEditionDetailResult;
+import com.smartlib.book.modular.edition.result.BookEditionSummaryResult;
+import com.smartlib.book.modular.edition.service.BookEditionService;
+import jakarta.annotation.Resource;
+import org.springframework.stereotype.Service;
+import vip.xiaonuo.common.enums.CommonSortOrderEnum;
+import vip.xiaonuo.common.exception.CommonException;
+import vip.xiaonuo.common.page.CommonPageRequest;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+@Service
+public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookEdition> implements BookEditionService {
+
+    @Resource
+    private BookEditionIsbnMapper bookEditionIsbnMapper;
+
+    @Resource
+    private BookEditionConvert bookEditionConvert;
+
+    @Override
+    public Page<BookEditionSummaryResult> page(BookEditionPageParam param) {
+        Page<BookEdition> page = CommonPageRequest.defaultPage();
+        if (page.getSize() <= 0) {
+            throw new CommonException("每页条数必须大于0");
+        }
+        LambdaQueryWrapper<BookEdition> query = new LambdaQueryWrapper<BookEdition>()
+                .select(BookEdition::getKey, BookEdition::getTitle, BookEdition::getWorkKey, BookEdition::getOcaid)
+                .eq(BookEdition::getWorkKey, param.getWorkKey().trim());
+        String searchKey = StrUtil.trim(param.getSearchKey());
+        query.like(StrUtil.isNotBlank(searchKey), BookEdition::getTitle, searchKey);
+        if (ObjectUtil.isAllNotEmpty(param.getSortField(), param.getSortOrder())) {
+            CommonSortOrderEnum.validate(param.getSortOrder());
+            boolean asc = CommonSortOrderEnum.ASC.getValue().equals(param.getSortOrder());
+            if ("title".equals(param.getSortField())) {
+                query.orderBy(true, asc, BookEdition::getTitle).orderByAsc(BookEdition::getKey);
+            } else if ("key".equals(param.getSortField())) {
+                query.orderBy(true, asc, BookEdition::getKey);
+            } else {
+                throw new CommonException("不支持的排序字段：{}", param.getSortField());
+            }
+        } else {
+            query.orderByAsc(BookEdition::getKey);
+        }
+        page = this.page(page, query);
+        Page<BookEditionSummaryResult> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        result.setRecords(bookEditionConvert.toSummaries(page.getRecords()));
+        return result;
+    }
+
+    @Override
+    public BookEditionDetailResult detail(String key) {
+        // data 默认不加载，详情显式查询。
+        BookEdition edition = this.getOne(new LambdaQueryWrapper<BookEdition>()
+                .select(BookEdition::getKey, BookEdition::getTitle, BookEdition::getWorkKey,
+                        BookEdition::getOcaid, BookEdition::getData).eq(BookEdition::getKey, key));
+        if (edition == null) {
+            throw new CommonException("出版版本不存在，key值为：{}", key);
+        }
+        BookEditionDetailResult result = bookEditionConvert.toDetail(edition);
+        result.setIsbns(bookEditionIsbnMapper.selectList(new LambdaQueryWrapper<BookEditionIsbn>()
+                .select(BookEditionIsbn::getIsbn).eq(BookEditionIsbn::getEditionKey, key)
+                .orderByAsc(BookEditionIsbn::getIsbn)).stream().map(BookEditionIsbn::getIsbn).toList());
+        JsonNode data = edition.getData();
+        if (data == null || !data.isObject()) {
+            return result;
+        }
+        result.setSubtitle(data.path("subtitle").asText(null));
+        JsonNode description = data.path("description");
+        result.setDescription(description.isTextual() ? description.asText() : description.path("value").asText(null));
+        result.setPublishDate(data.path("publish_date").asText(null));
+        JsonNode pages = data.path("number_of_pages");
+        if (pages.isIntegralNumber() && pages.canConvertToInt() && pages.asInt() > 0) {
+            result.setNumberOfPages(pages.asInt());
+        }
+        List<String> publishers = new ArrayList<>();
+        if (data.path("publishers").isArray()) {
+            for (JsonNode publisher : data.path("publishers")) {
+                if (publisher.isTextual() && StrUtil.isNotBlank(publisher.asText())) {
+                    publishers.add(publisher.asText());
+                }
+            }
+        }
+        result.setPublishers(publishers);
+        List<String> languages = new ArrayList<>();
+        if (data.path("languages").isArray()) {
+            for (JsonNode language : data.path("languages")) {
+                JsonNode languageKey = language.path("key");
+                if (languageKey.isTextual() && StrUtil.isNotBlank(languageKey.asText())) {
+                    languages.add(languageKey.asText());
+                }
+            }
+        }
+        result.setLanguages(languages);
+        Set<Long> covers = new LinkedHashSet<>();
+        if (data.path("covers").isArray()) {
+            for (JsonNode cover : data.path("covers")) {
+                if (cover.isIntegralNumber() && cover.canConvertToLong() && cover.asLong() > 0) {
+                    covers.add(cover.asLong());
+                }
+            }
+        }
+        result.setCovers(new ArrayList<>(covers));
+        return result;
+    }
+
+    @Override
+    public List<BookEditionSummaryResult> byIsbn(String isbn) {
+        String normalized = StrUtil.nullToEmpty(isbn).replaceAll("[\\s\\p{Z}-]", "").toUpperCase(Locale.ROOT);
+        boolean isbn10 = normalized.matches("[0-9]{9}[0-9X]");
+        if (!isbn10 && !normalized.matches("97[89][0-9]{10}")) {
+            throw new CommonException("ISBN格式不正确");
+        }
+        int checksum = 0;
+        for (int i = 0; i < normalized.length(); i++) {
+            int digit = normalized.charAt(i) == 'X' ? 10 : normalized.charAt(i) - '0';
+            checksum += digit * (isbn10 ? 10 - i : (i % 2 == 0 ? 1 : 3));
+        }
+        if (checksum % (isbn10 ? 11 : 10) != 0) {
+            throw new CommonException("ISBN校验位不正确");
+        }
+        // 导入器已保存 ISBN-10/13 等价别名；IN 子查询保证同一版本只返回一次。
+        return bookEditionConvert.toSummaries(this.list(new LambdaQueryWrapper<BookEdition>()
+                .select(BookEdition::getKey, BookEdition::getTitle, BookEdition::getWorkKey, BookEdition::getOcaid)
+                .apply("`key` IN (SELECT edition_key FROM edition_isbns WHERE isbn = {0}"
+                        + " AND delete_flag = 'NOT_DELETE')", normalized)
+                .orderByAsc(BookEdition::getKey)));
+    }
+}
