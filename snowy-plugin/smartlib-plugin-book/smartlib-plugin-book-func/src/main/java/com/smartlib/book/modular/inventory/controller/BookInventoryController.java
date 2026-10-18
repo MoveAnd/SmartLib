@@ -1,13 +1,15 @@
 package com.smartlib.book.modular.inventory.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.smartlib.book.modular.inventory.entity.BookInventory;
 import com.smartlib.book.modular.inventory.param.BookInventoryAddParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryAdjustStockParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryIdParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryPageParam;
+import com.smartlib.book.modular.inventory.result.BookInventoryResult;
+import com.smartlib.book.modular.inventory.service.BookInventoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,16 +23,19 @@ import vip.xiaonuo.common.pojo.CommonResult;
 @Validated
 public class BookInventoryController {
 
+    @Resource
+    private BookInventoryService bookInventoryService;
+
     @Operation(summary = "馆藏库存分页查询")
     @GetMapping("/book/inventory/page")
-    public CommonResult<Page<BookInventory>> page(@Valid BookInventoryPageParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+    public CommonResult<Page<BookInventoryResult>> page(@Valid BookInventoryPageParam param) {
+        return CommonResult.data(bookInventoryService.page(param));
     }
 
     @Operation(summary = "馆藏库存详情")
     @GetMapping("/book/inventory/detail")
-    public CommonResult<BookInventory> detail(@Valid BookInventoryIdParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+    public CommonResult<BookInventoryResult> detail(@Valid BookInventoryIdParam param) {
+        return CommonResult.data(bookInventoryService.detail(param.getId()));
     }
 
     @Operation(summary = "新增馆藏")

@@ -1,18 +1,18 @@
 package com.smartlib.book.modular.inventory.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.smartlib.book.modular.inventory.entity.BookInventory;
 import com.smartlib.book.modular.inventory.param.BookInventoryAddParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryAdjustStockParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryPageParam;
+import com.smartlib.book.modular.inventory.result.BookInventoryResult;
 
 public interface BookInventoryService {
 
     /** 馆藏库存分页查询。 */
-    Page<BookInventory> page(BookInventoryPageParam param);
+    Page<BookInventoryResult> page(BookInventoryPageParam param);
 
     /** 根据馆藏ID查询详情。 */
-    BookInventory detail(String id);
+    BookInventoryResult detail(String id);
 
     /** 新增馆藏，可借库存初始化为总库存，默认下架。 */
     void add(BookInventoryAddParam param);
