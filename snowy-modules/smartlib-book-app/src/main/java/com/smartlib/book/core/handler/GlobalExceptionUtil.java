@@ -1,5 +1,8 @@
 package com.smartlib.book.core.handler;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindException;
@@ -11,13 +14,19 @@ import vip.xiaonuo.common.pojo.CommonResult;
 
 import java.util.stream.Collectors;
 
-/** 将图书只读接口涉及的异常转为通用响应。 */
+/** 将图书接口涉及的异常转为通用响应。 */
 @Slf4j
 public final class GlobalExceptionUtil {
     private GlobalExceptionUtil() {
     }
 
     public static CommonResult<String> getCommonResult(Exception e) {
+        if (e instanceof NotLoginException) {
+            return CommonResult.get(401, "请先登录管理员账号", null);
+        }
+        if (e instanceof NotRoleException || e instanceof NotPermissionException) {
+            return CommonResult.get(403, "无权访问", null);
+        }
         if (e instanceof BindException bindException) {
             String message = bindException.getBindingResult().getAllErrors().stream()
                     .map(error -> error.getDefaultMessage() == null ? "参数格式错误" : error.getDefaultMessage())

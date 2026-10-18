@@ -1,11 +1,24 @@
 package com.smartlib.book.core.config;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.dev33.satoken.config.SaTokenConfig;
+import cn.dev33.satoken.context.SaHolder;
+import cn.dev33.satoken.context.model.SaResponse;
+import cn.dev33.satoken.filter.SaServletFilter;
+import cn.dev33.satoken.router.SaHttpMethod;
+import cn.dev33.satoken.router.SaRouter;
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.ContentType;
+import cn.hutool.http.Header;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusPropertiesCustomizer;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import jakarta.annotation.Resource;
 import org.apache.ibatis.reflection.MetaObject;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
@@ -14,9 +27,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import vip.xiaonuo.auth.core.util.StpClientUtil;
+import com.smartlib.book.core.handler.GlobalExceptionUtil;
 import vip.xiaonuo.common.enums.CommonDeleteFlagEnum;
 import vip.xiaonuo.common.interceptor.CommonTraceInterceptor;
 import vip.xiaonuo.common.pojo.CommonEntity;
+import vip.xiaonuo.common.pojo.CommonResult;
+import vip.xiaonuo.common.util.CommonServletUtil;
+import vip.xiaonuo.common.util.CommonTraceIdUtil;
 
 import java.util.Date;
 
@@ -26,6 +43,69 @@ import java.util.Date;
 @Configuration(proxyBeanMethods = false)
 @MapperScan("com.smartlib.book.modular.*.mapper")
 public class GlobalConfigure implements WebMvcConfigurer {
+
+    @Resource
+    private SaTokenConfig saTokenConfig;
+
+    /** 无需登录的接口地址集合。 */
+    public static final String[] NO_LOGIN_PATH_ARR = {
+            /* 主入口 */
+            "/",
+
+            /* 静态资源与接口文档 */
+            "/favicon.ico",
+            "/doc.html",
+            "/webjars/**",
+            "/v3/api-docs/**",
+            "/swagger-resources/**",
+            "/configuration/ui",
+            "/configuration/security",
+
+            /* 健康检查 */
+            "/actuator/health",
+            "/actuator/health/**",
+
+            /* 公开书目查询 */
+            "/book/work/page",
+            "/book/work/detail",
+            "/book/author/page",
+            "/book/author/detail",
+            "/book/edition/page",
+            "/book/edition/detail",
+            "/book/edition/byIsbn"
+    };
+
+    /** 沿用Biz的登录过滤器，公开查询之外校验B端登录并续期。 */
+    @Bean
+    public SaServletFilter getSaServletFilter() {
+        return new SaServletFilter()
+                .addInclude("/**")
+                .setAuth(r -> SaRouter.match("/**")
+                        .notMatch(CollectionUtil.newArrayList(NO_LOGIN_PATH_ARR))
+                        .check(r1 -> {
+                            StpUtil.checkLogin();
+                            StpUtil.renewTimeout(saTokenConfig.getTimeout());
+                        }))
+                .setBeforeAuth(obj -> {
+                    SaHolder.getResponse()
+                            .setHeader("X-XSS-Protection", "1; mode=block")
+                            .setHeader("X-Content-Type-Options", "nosniff")
+                            .setHeader("Access-Control-Allow-Origin", "*")
+                            .setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE")
+                            .setHeader("Access-Control-Max-Age", "3600")
+                            .setHeader("Access-Control-Allow-Headers", "*");
+                    SaRouter.match(SaHttpMethod.OPTIONS).free(r -> {}).back();
+                })
+                .setError(e -> {
+                    SaResponse response = SaHolder.getResponse();
+                    response.setHeader(Header.CONTENT_TYPE.getValue(), ContentType.JSON + ";charset=" + CharsetUtil.UTF_8);
+                    CommonResult<String> result = GlobalExceptionUtil.getCommonResult((Exception) e);
+                    // 过滤器早于MVC链路追踪拦截器执行，拒绝请求也需要traceId。
+                    result.setTraceId(CommonTraceIdUtil.generateTraceId(CommonServletUtil.getRequest()));
+                    Gson gson = new GsonBuilder().serializeNulls().create();
+                    return gson.toJson(result);
+                });
+    }
 
     /** 按框架约定填充公共审计字段，未获取到登录身份时使用-1。 */
     @Component
