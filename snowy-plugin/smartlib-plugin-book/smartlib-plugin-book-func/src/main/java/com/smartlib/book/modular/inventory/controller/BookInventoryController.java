@@ -41,24 +41,28 @@ public class BookInventoryController {
     @Operation(summary = "新增馆藏")
     @PostMapping("/book/inventory/add")
     public CommonResult<String> add(@RequestBody @Valid BookInventoryAddParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+        bookInventoryService.add(param);
+        return CommonResult.ok();
     }
 
     @Operation(summary = "调整馆藏总库存")
     @PostMapping("/book/inventory/adjustStock")
     public CommonResult<String> adjustStock(@RequestBody @Valid BookInventoryAdjustStockParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+        bookInventoryService.adjustStock(param);
+        return CommonResult.ok();
     }
 
     @Operation(summary = "馆藏上架")
     @PostMapping("/book/inventory/onShelf")
     public CommonResult<String> onShelf(@RequestBody @Valid BookInventoryIdParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+        bookInventoryService.onShelf(param.getId());
+        return CommonResult.ok();
     }
 
     @Operation(summary = "馆藏下架")
     @PostMapping("/book/inventory/offShelf")
     public CommonResult<String> offShelf(@RequestBody @Valid BookInventoryIdParam param) {
-        return CommonResult.get(501, "接口暂未实现", null);
+        bookInventoryService.offShelf(param.getId());
+        return CommonResult.ok();
     }
 }
