@@ -9,6 +9,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import vip.xiaonuo.auth.core.enums.SaClientTypeEnum;
 import vip.xiaonuo.common.exception.CommonException;
 import vip.xiaonuo.common.pojo.CommonResult;
 
@@ -21,8 +22,9 @@ public final class GlobalExceptionUtil {
     }
 
     public static CommonResult<String> getCommonResult(Exception e) {
-        if (e instanceof NotLoginException) {
-            return CommonResult.get(401, "请先登录管理员账号", null);
+        if (e instanceof NotLoginException notLoginException) {
+            return CommonResult.get(401, SaClientTypeEnum.C.getValue().equals(notLoginException.getLoginType())
+                    ? "请先登录读者账号" : "请先登录管理员账号", null);
         }
         if (e instanceof NotRoleException || e instanceof NotPermissionException) {
             return CommonResult.get(403, "无权访问", null);

@@ -75,17 +75,32 @@ public class GlobalConfigure implements WebMvcConfigurer {
             "/book/edition/byIsbn"
     };
 
-    /** 沿用Biz的登录过滤器，公开查询之外校验B端登录并续期。 */
+    /** B端要排除的，相当于C端要认证的。 */
+    private static final String[] CLIENT_USER_PERMISSION_PATH_ARR = {
+            "/book/c/**"
+    };
+
+    /** 沿用Biz的登录过滤器，公开查询之外按路径分别校验B、C端登录。 */
     @Bean
     public SaServletFilter getSaServletFilter() {
         return new SaServletFilter()
                 .addInclude("/**")
-                .setAuth(r -> SaRouter.match("/**")
-                        .notMatch(CollectionUtil.newArrayList(NO_LOGIN_PATH_ARR))
-                        .check(r1 -> {
-                            StpUtil.checkLogin();
-                            StpUtil.renewTimeout(saTokenConfig.getTimeout());
-                        }))
+                .setAuth(r -> {
+                    // B端的接口校验B端登录。
+                    SaRouter.match("/**")
+                            .notMatch(CollectionUtil.newArrayList(NO_LOGIN_PATH_ARR))
+                            .notMatch(CollectionUtil.newArrayList(CLIENT_USER_PERMISSION_PATH_ARR))
+                            .check(r1 -> {
+                                StpUtil.checkLogin();
+                                StpUtil.renewTimeout(saTokenConfig.getTimeout());
+                            });
+
+                    // C端的接口校验C端登录。
+                    SaRouter.match("/**")
+                            .notMatch(CollectionUtil.newArrayList(NO_LOGIN_PATH_ARR))
+                            .match(CollectionUtil.newArrayList(CLIENT_USER_PERMISSION_PATH_ARR))
+                            .check(r1 -> StpClientUtil.checkLogin());
+                })
                 .setBeforeAuth(obj -> {
                     SaHolder.getResponse()
                             .setHeader("X-XSS-Protection", "1; mode=block")

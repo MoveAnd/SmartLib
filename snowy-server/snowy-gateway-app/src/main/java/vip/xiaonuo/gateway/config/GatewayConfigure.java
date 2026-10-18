@@ -244,7 +244,8 @@ public class GatewayConfigure {
      */
     private static final String[] CLIENT_USER_PERMISSION_PATH_ARR = {
             "/api/webapp/auth/c/**",
-            "/api/webapp/client/c/**"
+            "/api/webapp/client/c/**",
+            "/api/bookapp/book/c/**"
     };
 
 
