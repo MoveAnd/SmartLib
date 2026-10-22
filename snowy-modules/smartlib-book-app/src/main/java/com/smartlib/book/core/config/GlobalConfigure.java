@@ -61,7 +61,9 @@ public class GlobalConfigure implements WebMvcConfigurer {
             "/configuration/ui",
             "/configuration/security",
 
-            /* 健康检查 */
+            /* Admin 端点发现、应用信息与健康检查 */
+            "/actuator",
+            "/actuator/info",
             "/actuator/health",
             "/actuator/health/**",
 
