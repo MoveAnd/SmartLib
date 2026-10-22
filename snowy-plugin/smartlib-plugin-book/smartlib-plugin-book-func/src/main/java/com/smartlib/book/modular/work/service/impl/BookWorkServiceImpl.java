@@ -41,13 +41,15 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
             throw new CommonException("每页条数必须大于0");
         }
         QueryWrapper<BookWork> query = new QueryWrapper<BookWork>().checkSqlInjection();
-        query.lambda().select(BookWork::getKey, BookWork::getTitle);
         String searchKey = StrUtil.trim(param.getSearchKey());
         query.lambda().like(StrUtil.isNotBlank(searchKey), BookWork::getTitle, searchKey);
         if (StrUtil.isNotBlank(param.getAuthorKey())) {
             query.apply("`key` IN (SELECT work_key FROM author_works WHERE author_key = {0}"
                     + " AND delete_flag = 'NOT_DELETE')", param.getAuthorKey().trim());
         }
+        // 计数复用筛选条件，不携带列表的查询字段和排序。
+        QueryWrapper<BookWork> countQuery = query.clone();
+        query.lambda().select(BookWork::getKey, BookWork::getTitle);
         if (ObjectUtil.isAllNotEmpty(param.getSortField(), param.getSortOrder())) {
             CommonSortOrderEnum.validate(param.getSortOrder());
             boolean asc = CommonSortOrderEnum.ASC.getValue().equals(param.getSortOrder());
@@ -61,7 +63,19 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
         } else {
             query.lambda().orderByAsc(BookWork::getKey);
         }
-        page = this.page(page, query);
+        if (page.getCurrent() == 1) {
+            // 首屏不足一页时，已取得全部匹配记录，无需再扫描一次统计总数。
+            // 保留原 LIKE 条件，避免全文分词、停用词等改变搜索结果。
+            page.setSearchCount(false);
+            page = this.page(page, query);
+            if (page.getRecords().size() < page.getSize()) {
+                page.setTotal(page.getRecords().size());
+            } else {
+                page.setTotal(this.count(countQuery));
+            }
+        } else {
+            page = this.page(page, query);
+        }
         Page<BookWorkSummaryResult> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         result.setRecords(bookWorkConvert.toSummaries(page.getRecords()));
         return result;

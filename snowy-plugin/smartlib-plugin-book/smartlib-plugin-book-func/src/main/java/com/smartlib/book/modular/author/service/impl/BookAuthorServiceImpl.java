@@ -37,12 +37,14 @@ public class BookAuthorServiceImpl extends ServiceImpl<BookAuthorMapper, BookAut
             throw new CommonException("每页条数必须大于0");
         }
         QueryWrapper<BookAuthor> queryWrapper = new QueryWrapper<BookAuthor>().checkSqlInjection();
-        // 摘要只返回主键与姓名，不读取 data 大字段
-        queryWrapper.lambda().select(BookAuthor::getKey, BookAuthor::getName);
         String searchKey = StrUtil.trim(param.getSearchKey());
         if (ObjectUtil.isNotEmpty(searchKey)) {
             queryWrapper.lambda().like(BookAuthor::getName, searchKey);
         }
+        // 计数复用筛选条件，不携带列表的查询字段和排序。
+        QueryWrapper<BookAuthor> countQuery = queryWrapper.clone();
+        // 摘要只返回主键与姓名，不读取 data 大字段。
+        queryWrapper.lambda().select(BookAuthor::getKey, BookAuthor::getName);
         // 排序字段白名单：不接受客户端传入的 SQL 列名，key 为保留字，交给实体列名加反引号
         if (ObjectUtil.isAllNotEmpty(param.getSortField(), param.getSortOrder())) {
             CommonSortOrderEnum.validate(param.getSortOrder());
@@ -59,7 +61,18 @@ public class BookAuthorServiceImpl extends ServiceImpl<BookAuthorMapper, BookAut
             // 默认按主键升序：命中聚簇索引，分页结果稳定
             queryWrapper.lambda().orderByAsc(BookAuthor::getKey);
         }
-        bookAuthorPage = this.page(bookAuthorPage, queryWrapper);
+        if (bookAuthorPage.getCurrent() == 1) {
+            // 首屏不足一页时，返回条数就是准确总数，无需再执行 COUNT。
+            bookAuthorPage.setSearchCount(false);
+            bookAuthorPage = this.page(bookAuthorPage, queryWrapper);
+            if (bookAuthorPage.getRecords().size() < bookAuthorPage.getSize()) {
+                bookAuthorPage.setTotal(bookAuthorPage.getRecords().size());
+            } else {
+                bookAuthorPage.setTotal(this.count(countQuery));
+            }
+        } else {
+            bookAuthorPage = this.page(bookAuthorPage, queryWrapper);
+        }
         Page<BookAuthorSummaryResult> resultPage = new Page<>(bookAuthorPage.getCurrent(), bookAuthorPage.getSize(),
                 bookAuthorPage.getTotal());
         resultPage.setRecords(bookAuthorConvert.toSummaries(bookAuthorPage.getRecords()));
