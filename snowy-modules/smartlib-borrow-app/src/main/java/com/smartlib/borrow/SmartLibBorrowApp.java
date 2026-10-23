@@ -11,7 +11,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  */
 @Slf4j
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = "com.smartlib")
+@EnableFeignClients(basePackages = {"com.smartlib", "vip.xiaonuo"})
 @SpringBootApplication
 public class SmartLibBorrowApp {
 

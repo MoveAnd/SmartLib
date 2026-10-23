@@ -11,6 +11,11 @@
     <artifactId>smartlib-plugin-borrow-func</artifactId>
     <packaging>jar</packaging>
     <dependencies>
+        <!-- 借阅业务通过Feign查询C端用户，账号有效性在Borrow中判断。 -->
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
+            <artifactId>snowy-plugin-client-feign</artifactId>
+        </dependency>
         <dependency>
             <groupId>vip.xiaonuo</groupId>
             <artifactId>smartlib-plugin-borrow-api</artifactId>

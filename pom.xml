@@ -279,6 +279,17 @@
                 <version>${snowy.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>snowy-plugin-client-feign</artifactId>
+                <version>${snowy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>snowy-plugin-client-feign-provider</artifactId>
+                <version>${snowy.version}</version>
+            </dependency>
+
             <!-- snowy-plugin-client-func -->
             <dependency>
                 <groupId>vip.xiaonuo</groupId>

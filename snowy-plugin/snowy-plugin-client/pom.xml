@@ -21,6 +21,10 @@
 
         <!-- C端功能插件func实现 -->
         <module>snowy-plugin-client-func</module>
+
+        <!-- C端内部Feign契约与提供者 -->
+        <module>snowy-plugin-client-feign</module>
+        <module>snowy-plugin-client-feign-provider</module>
     </modules>
 
 </project>

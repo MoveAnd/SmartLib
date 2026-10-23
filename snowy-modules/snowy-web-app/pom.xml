@@ -113,6 +113,12 @@
             <artifactId>snowy-plugin-client-func</artifactId>
         </dependency>
 
+        <!-- C端内部Feign接口提供者 -->
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
+            <artifactId>snowy-plugin-client-feign-provider</artifactId>
+        </dependency>
+
         <!-- 开发工具插件 -->
         <dependency>
             <groupId>vip.xiaonuo</groupId>
