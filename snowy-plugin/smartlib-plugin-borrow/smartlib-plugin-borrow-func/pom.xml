@@ -11,6 +11,16 @@
     <artifactId>smartlib-plugin-borrow-func</artifactId>
     <packaging>jar</packaging>
     <dependencies>
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
+            <artifactId>snowy-plugin-auth-api</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>vip.xiaonuo</groupId>
+                    <artifactId>snowy-common</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <!-- 借阅业务通过Feign查询C端用户，账号有效性在Borrow中判断。 -->
         <dependency>
             <groupId>vip.xiaonuo</groupId>
@@ -23,25 +33,6 @@
         <dependency>
             <groupId>vip.xiaonuo</groupId>
             <artifactId>snowy-common</artifactId>
-            <!-- 本轮仅搭建服务工程，无缓存、登录态或字段翻译需求，避免启动时依赖 Redis。 -->
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-data-redis</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.redisson</groupId>
-                    <artifactId>redisson-spring-boot-starter</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.dromara</groupId>
-                    <artifactId>easy-trans-spring-boot-starter</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.dromara</groupId>
-                    <artifactId>easy-trans-mybatis-plus-extend</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
     </dependencies>
 </project>
