@@ -142,6 +142,33 @@
     <dependencyManagement>
         <dependencies>
             <!-- snowy-cloud-inner-start -->
+            <!-- 借阅服务插件 -->
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>smartlib-plugin-borrow-api</artifactId>
+                <version>${snowy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>smartlib-plugin-borrow-api-context</artifactId>
+                <version>${snowy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>smartlib-plugin-borrow-feign</artifactId>
+                <version>${snowy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>smartlib-plugin-borrow-feign-provider</artifactId>
+                <version>${snowy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>smartlib-plugin-borrow-func</artifactId>
+                <version>${snowy.version}</version>
+            </dependency>
+
             <!-- 图书服务插件 -->
             <dependency>
                 <groupId>vip.xiaonuo</groupId>

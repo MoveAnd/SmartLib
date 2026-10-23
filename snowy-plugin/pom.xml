@@ -42,6 +42,9 @@
 
         <!-- 图书服务插件 -->
         <module>smartlib-plugin-book</module>
+
+        <!-- 借阅服务插件 -->
+        <module>smartlib-plugin-borrow</module>
     </modules>
 
 </project>

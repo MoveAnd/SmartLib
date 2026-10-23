@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>vip.xiaonuo</groupId>
+        <artifactId>snowy-plugin</artifactId>
+        <version>3.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>smartlib-plugin-borrow</artifactId>
+    <packaging>pom</packaging>
+    <description>借阅服务插件</description>
+    <modules>
+        <module>smartlib-plugin-borrow-api</module>
+        <module>smartlib-plugin-borrow-api-context</module>
+        <module>smartlib-plugin-borrow-feign</module>
+        <module>smartlib-plugin-borrow-feign-provider</module>
+        <module>smartlib-plugin-borrow-func</module>
+    </modules>
+</project>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>vip.xiaonuo</groupId>
+        <artifactId>smartlib-plugin-borrow</artifactId>
+        <version>3.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>smartlib-plugin-borrow-func</artifactId>
+    <packaging>jar</packaging>
+    <dependencies>
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
+            <artifactId>smartlib-plugin-borrow-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
+            <artifactId>snowy-common</artifactId>
+            <!-- 本轮仅搭建服务工程，无缓存、登录态或字段翻译需求，避免启动时依赖 Redis。 -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-data-redis</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.redisson</groupId>
+                    <artifactId>redisson-spring-boot-starter</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.dromara</groupId>
+                    <artifactId>easy-trans-spring-boot-starter</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.dromara</groupId>
+                    <artifactId>easy-trans-mybatis-plus-extend</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+</project>

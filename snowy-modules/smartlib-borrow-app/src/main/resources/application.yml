@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: smartlib-borrow-app
+  profiles:
+    active: dev
+  config:
+    import:
+      - optional:nacos:${spring.application.name}-${spring.profiles.active}.yaml
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_SERVER_ADDR}
+        namespace: snowy-cloud-dev
+        group: dev
+        username: ${NACOS_USERNAME}
+        password: ${NACOS_PASSWORD}
+      discovery:
+        server-addr: ${spring.cloud.nacos.config.server-addr}
+        namespace: ${spring.cloud.nacos.config.namespace}
+        group: ${spring.cloud.nacos.config.group}
+        username: ${spring.cloud.nacos.config.username}
+        password: ${spring.cloud.nacos.config.password}

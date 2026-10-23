@@ -24,6 +24,9 @@
 
         <!-- 图书服务启动组件 -->
         <module>smartlib-book-app</module>
+
+        <!-- 借阅服务启动组件 -->
+        <module>smartlib-borrow-app</module>
     </modules>
 
 </project>
