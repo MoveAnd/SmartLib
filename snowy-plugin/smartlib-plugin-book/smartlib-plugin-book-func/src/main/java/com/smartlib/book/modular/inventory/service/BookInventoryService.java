@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.smartlib.book.modular.inventory.param.BookInventoryAddParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryAdjustStockParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryPageParam;
+import com.smartlib.book.modular.inventory.result.BookInventoryClientDetailResult;
 import com.smartlib.book.modular.inventory.result.BookInventoryResult;
 
 public interface BookInventoryService {
@@ -13,6 +14,9 @@ public interface BookInventoryService {
 
     /** 根据馆藏ID查询详情。 */
     BookInventoryResult detail(String id);
+
+    /** C端根据出版版本查询馆藏详情，包含上下架状态，排除已删除记录。 */
+    BookInventoryClientDetailResult clientDetail(String editionKey);
 
     /** 新增馆藏，可借库存初始化为总库存，默认下架。 */
     void add(BookInventoryAddParam param);

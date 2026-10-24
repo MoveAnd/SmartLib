@@ -2,6 +2,7 @@ package com.smartlib.book.modular.inventory.convert;
 
 import com.smartlib.book.modular.inventory.entity.BookInventory;
 import com.smartlib.book.modular.inventory.param.BookInventoryAddParam;
+import com.smartlib.book.modular.inventory.result.BookInventoryClientDetailResult;
 import com.smartlib.book.modular.inventory.result.BookInventoryResult;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
@@ -19,6 +20,8 @@ public interface BookInventoryConvert {
     BookInventory toEntity(BookInventoryAddParam param);
 
     BookInventoryResult toResult(BookInventory inventory);
+
+    BookInventoryClientDetailResult toClientDetail(BookInventory inventory);
 
     List<BookInventoryResult> toResults(List<BookInventory> inventories);
 }

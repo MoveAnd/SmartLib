@@ -14,6 +14,7 @@ import com.smartlib.book.modular.inventory.mapper.BookInventoryMapper;
 import com.smartlib.book.modular.inventory.param.BookInventoryAddParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryAdjustStockParam;
 import com.smartlib.book.modular.inventory.param.BookInventoryPageParam;
+import com.smartlib.book.modular.inventory.result.BookInventoryClientDetailResult;
 import com.smartlib.book.modular.inventory.result.BookInventoryResult;
 import com.smartlib.book.modular.inventory.service.BookInventoryService;
 import jakarta.annotation.Resource;
@@ -84,6 +85,18 @@ public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, B
             throw new CommonException("馆藏不存在，id值为：{}", id);
         }
         return bookInventoryConvert.toResult(inventory);
+    }
+
+    @Override
+    public BookInventoryClientDetailResult clientDetail(String editionKey) {
+        BookInventory inventory = this.getOne(new LambdaQueryWrapper<BookInventory>()
+                .select(BookInventory::getId, BookInventory::getEditionKey, BookInventory::getTotalStock,
+                        BookInventory::getAvailableStock, BookInventory::getStatus)
+                .eq(BookInventory::getEditionKey, StrUtil.trim(editionKey)));
+        if (inventory == null) {
+            throw new CommonException("馆藏不存在，editionKey值为：{}", editionKey);
+        }
+        return bookInventoryConvert.toClientDetail(inventory);
     }
 
     @Override

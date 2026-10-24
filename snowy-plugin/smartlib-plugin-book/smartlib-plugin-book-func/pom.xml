@@ -17,6 +17,10 @@
         </dependency>
         <dependency>
             <groupId>vip.xiaonuo</groupId>
+            <artifactId>snowy-plugin-auth-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
             <artifactId>snowy-common</artifactId>
         </dependency>
         <dependency>
