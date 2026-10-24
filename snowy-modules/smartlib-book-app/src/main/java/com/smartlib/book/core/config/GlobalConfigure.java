@@ -15,6 +15,7 @@ import cn.hutool.http.Header;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusPropertiesCustomizer;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -162,10 +163,11 @@ public class GlobalConfigure implements WebMvcConfigurer {
         }
     }
 
-    /** 与项目其他服务一致，启用MyBatis-Plus分页插件。 */
+    /** 启用 MyBatis-Plus 乐观锁及分页插件。 */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         return interceptor;
     }
