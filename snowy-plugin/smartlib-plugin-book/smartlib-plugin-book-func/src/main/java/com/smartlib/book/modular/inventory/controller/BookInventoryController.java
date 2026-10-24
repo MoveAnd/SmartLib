@@ -8,13 +8,16 @@ import com.smartlib.book.modular.inventory.param.BookInventoryPageParam;
 import com.smartlib.book.modular.inventory.result.BookInventoryResult;
 import com.smartlib.book.modular.inventory.service.BookInventoryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vip.xiaonuo.common.pojo.CommonResult;
 
@@ -34,8 +37,10 @@ public class BookInventoryController {
 
     @Operation(summary = "馆藏库存详情")
     @GetMapping("/book/inventory/detail")
-    public CommonResult<BookInventoryResult> detail(@Valid BookInventoryIdParam param) {
-        return CommonResult.data(bookInventoryService.detail(param.getId()));
+    public CommonResult<BookInventoryResult> detail(
+            @Parameter(description = "馆藏ID", required = true)
+            @RequestParam("id") @NotBlank(message = "id不能为空") String id) {
+        return CommonResult.data(bookInventoryService.detail(id));
     }
 
     @Operation(summary = "新增馆藏")

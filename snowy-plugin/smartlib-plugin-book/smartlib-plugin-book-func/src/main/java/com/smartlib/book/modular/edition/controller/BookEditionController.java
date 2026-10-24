@@ -1,18 +1,19 @@
 package com.smartlib.book.modular.edition.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.smartlib.book.modular.edition.param.BookEditionKeyParam;
-import com.smartlib.book.modular.edition.param.BookEditionIsbnParam;
 import com.smartlib.book.modular.edition.param.BookEditionPageParam;
 import com.smartlib.book.modular.edition.result.BookEditionDetailResult;
 import com.smartlib.book.modular.edition.result.BookEditionSummaryResult;
 import com.smartlib.book.modular.edition.service.BookEditionService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vip.xiaonuo.common.pojo.CommonResult;
 
@@ -34,13 +35,17 @@ public class BookEditionController {
 
     @Operation(summary = "出版版本详情")
     @GetMapping("/book/edition/detail")
-    public CommonResult<BookEditionDetailResult> detail(@Valid BookEditionKeyParam param) {
-        return CommonResult.data(bookEditionService.detail(param.getKey()));
+    public CommonResult<BookEditionDetailResult> detail(
+            @Parameter(description = "版本主键", example = "/books/OL7353617M", required = true)
+            @RequestParam("key") @NotBlank(message = "key不能为空") String key) {
+        return CommonResult.data(bookEditionService.detail(key));
     }
 
     @Operation(summary = "通过ISBN查询版本列表")
     @GetMapping("/book/edition/byIsbn")
-    public CommonResult<List<BookEditionSummaryResult>> byIsbn(@Valid BookEditionIsbnParam param) {
-        return CommonResult.data(bookEditionService.byIsbn(param.getIsbn()));
+    public CommonResult<List<BookEditionSummaryResult>> byIsbn(
+            @Parameter(description = "ISBN-10或ISBN-13", example = "9780140328721", required = true)
+            @RequestParam("isbn") @NotBlank(message = "ISBN不能为空") String isbn) {
+        return CommonResult.data(bookEditionService.byIsbn(isbn));
     }
 }
