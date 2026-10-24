@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Schema(description = "本人借阅名额详情")
+@Schema(description = "个人借阅名额详情")
 public class BorrowUserQuotaDetailResult {
 
     @Schema(description = "C端读者ID")
@@ -20,4 +20,7 @@ public class BorrowUserQuotaDetailResult {
 
     @Schema(description = "剩余借阅名额")
     private Integer remainingCount;
+
+    @Schema(description = "数据版本，无记录时为0")
+    private Long rowVersion;
 }

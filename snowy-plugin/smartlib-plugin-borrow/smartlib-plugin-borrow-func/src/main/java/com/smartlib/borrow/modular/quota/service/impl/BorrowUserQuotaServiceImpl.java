@@ -1,24 +1,51 @@
 package com.smartlib.borrow.modular.quota.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.smartlib.borrow.modular.quota.convert.BorrowUserQuotaConvert;
 import com.smartlib.borrow.modular.quota.entity.BorrowUserQuota;
 import com.smartlib.borrow.modular.quota.mapper.BorrowUserQuotaMapper;
+import com.smartlib.borrow.modular.quota.param.BorrowUserQuotaAdjustLimitParam;
 import com.smartlib.borrow.modular.quota.result.BorrowUserQuotaDetailResult;
 import com.smartlib.borrow.modular.quota.service.BorrowUserQuotaService;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import vip.xiaonuo.common.exception.CommonException;
 
 @Service
 public class BorrowUserQuotaServiceImpl extends ServiceImpl<BorrowUserQuotaMapper, BorrowUserQuota>
         implements BorrowUserQuotaService {
 
+    @Resource
+    private BorrowUserQuotaConvert borrowUserQuotaConvert;
+
     @Override
     public BorrowUserQuotaDetailResult detail(String userId) {
         BorrowUserQuota quota = this.getById(userId);
-        BorrowUserQuotaDetailResult result = new BorrowUserQuotaDetailResult();
-        result.setUserId(userId);
-        result.setBorrowLimit(quota == null ? 0 : quota.getBorrowLimit());
-        result.setBorrowedCount(quota == null ? 0 : quota.getBorrowedCount());
+        if (quota == null) {
+            quota = new BorrowUserQuota();
+            quota.setUserId(userId);
+            quota.setBorrowLimit(0);
+            quota.setBorrowedCount(0);
+            quota.setRowVersion(0L);
+        }
+        BorrowUserQuotaDetailResult result = borrowUserQuotaConvert.toResult(quota);
         result.setRemainingCount(Math.max(result.getBorrowLimit() - result.getBorrowedCount(), 0));
         return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BorrowUserQuotaDetailResult adjustLimit(BorrowUserQuotaAdjustLimitParam param) {
+        BorrowUserQuota quota = this.getById(param.getUserId());
+        if (quota == null) {
+            throw new CommonException("借阅名额记录不存在，userId值为：{}", param.getUserId());
+        }
+        BorrowUserQuota update = borrowUserQuotaConvert.toEntity(param);
+        update.setRowVersion(param.getExpectedVersion());
+        if (!this.updateById(update)) {
+            throw new CommonException("借阅名额版本冲突，请重新查询后提交");
+        }
+        return detail(param.getUserId());
     }
 }

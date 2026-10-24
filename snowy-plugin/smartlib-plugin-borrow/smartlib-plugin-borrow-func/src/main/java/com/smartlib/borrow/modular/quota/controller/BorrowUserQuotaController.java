@@ -13,13 +13,13 @@ import vip.xiaonuo.common.pojo.CommonResult;
 
 @Tag(name = "C端借阅名额接口")
 @RestController
+@SaClientCheckLogin
 public class BorrowUserQuotaController {
 
     @Resource
     private BorrowUserQuotaService borrowUserQuotaService;
 
     @Operation(summary = "查询本人借阅名额")
-    @SaClientCheckLogin
     @GetMapping("/borrow/c/quota/detail")
     public CommonResult<BorrowUserQuotaDetailResult> detail() {
         return CommonResult.data(borrowUserQuotaService.detail(StpClientUtil.getLoginIdAsString()));
