@@ -16,6 +16,10 @@
     <description>移动端管理功能插件func实现</description>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.seata</groupId>
+            <artifactId>seata-all</artifactId>
+        </dependency>
         <!-- 每个插件都要引入自己的对外接口 -->
         <dependency>
             <groupId>vip.xiaonuo</groupId>

@@ -21,7 +21,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!-- 借阅业务通过Feign查询C端用户，账号有效性在Borrow中判断。 -->
         <dependency>
             <groupId>vip.xiaonuo</groupId>
             <artifactId>snowy-plugin-client-feign</artifactId>
@@ -37,6 +36,10 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.seata</groupId>
+            <artifactId>seata-all</artifactId>
         </dependency>
     </dependencies>
     <build>
