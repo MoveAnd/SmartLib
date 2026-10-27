@@ -16,6 +16,10 @@
     <description>主应用启动组件</description>
 
     <dependencies>
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
+            <artifactId>smartlib-seata</artifactId>
+        </dependency>
         <!-- Seata 分布式事务客户端 -->
         <dependency>
             <groupId>org.apache.seata</groupId>

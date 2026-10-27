@@ -45,6 +45,7 @@ public class FeignRequestInterceptor implements RequestInterceptor {
             Optional.ofNullable(headerNames).ifPresent(headers -> {
                 while (headers.hasMoreElements()) {
                     String name = headers.nextElement();
+                    if (name.equalsIgnoreCase(org.apache.seata.core.context.RootContext.KEY_XID)) continue;
                     String value = request.getHeader(name);
 
                     // 跳过 content-length
