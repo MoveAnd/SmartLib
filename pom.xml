@@ -197,6 +197,12 @@
                 <artifactId>smartlib-plugin-book-func</artifactId>
                 <version>${snowy.version}</version>
             </dependency>
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>smartlib-seata</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- snowy-common -->
             <dependency>
                 <groupId>vip.xiaonuo</groupId>

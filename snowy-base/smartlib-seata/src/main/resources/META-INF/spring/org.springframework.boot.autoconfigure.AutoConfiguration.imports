@@ -1,0 +1,3 @@
+com.smartlib.seata.config.SeataAutoConfiguration
+com.smartlib.seata.config.SeataFeignAutoConfiguration
+com.smartlib.seata.config.SeataWebAutoConfiguration

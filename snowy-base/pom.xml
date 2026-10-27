@@ -18,6 +18,7 @@
     <modules>
         <!-- 基础通用开发组件 -->
         <module>snowy-common</module>
+        <module>smartlib-seata</module>
     </modules>
 
 </project>
