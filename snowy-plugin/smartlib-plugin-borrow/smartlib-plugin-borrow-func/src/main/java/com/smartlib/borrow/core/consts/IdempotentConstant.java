@@ -11,7 +11,7 @@ public final class IdempotentConstant {
      * Borrow 支持的幂等操作类型
      */
     public static final Set<String> ALLOWED_OPERATIONS =
-            Set.of("BORROW", "APPLY_RETURN", "CONFIRM_RETURN", "ADJUST_LIMIT");
+            Set.of("BORROW", "APPLY_RETURN", "CONFIRM_RETURN");
 
     private IdempotentConstant() {
     }
