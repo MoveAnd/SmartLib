@@ -1,7 +1,7 @@
-package com.smartlib.borrow.modular.idempotent.result;
+package com.smartlib.idempotent.result;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.smartlib.borrow.modular.idempotent.enums.IdempotentStatusEnum;
+import com.smartlib.idempotent.enums.IdempotentStatusEnum;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 

@@ -1,4 +1,4 @@
-package com.smartlib.borrow.modular.idempotent.entity;
+package com.smartlib.idempotent.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;

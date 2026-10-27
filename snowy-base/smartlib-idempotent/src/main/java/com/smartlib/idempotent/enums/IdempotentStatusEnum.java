@@ -1,4 +1,4 @@
-package com.smartlib.borrow.modular.idempotent.enums;
+package com.smartlib.idempotent.enums;
 
 import lombok.Getter;
 
@@ -12,7 +12,7 @@ public enum IdempotentStatusEnum {
     /** 本地已执行，全局事务尚未确认成功 */
     EXECUTED("EXECUTED"),
 
-    /** 全局事务或普通本地事务已确认提交 */
+    /** 全局事务已确认提交（AT 的 AsyncCommitting 也视为成功） */
     SUCCESS("SUCCESS"),
 
     /** 已确认完整回滚 */

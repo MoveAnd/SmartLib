@@ -13,6 +13,10 @@
     <dependencies>
         <dependency>
             <groupId>vip.xiaonuo</groupId>
+            <artifactId>smartlib-idempotent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
             <artifactId>snowy-plugin-auth-api</artifactId>
             <exclusions>
                 <exclusion>

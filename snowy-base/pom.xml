@@ -19,6 +19,7 @@
         <!-- 基础通用开发组件 -->
         <module>snowy-common</module>
         <module>smartlib-seata</module>
+        <module>smartlib-idempotent</module>
     </modules>
 
 </project>
