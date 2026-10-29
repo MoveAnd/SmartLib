@@ -1,7 +1,6 @@
 package com.smartlib.borrow.core.config;
 
 import cn.dev33.satoken.stp.StpUtil;
-import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusPropertiesCustomizer;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
@@ -18,6 +17,7 @@ import vip.xiaonuo.common.enums.CommonDeleteFlagEnum;
 import vip.xiaonuo.common.interceptor.CommonTraceInterceptor;
 import vip.xiaonuo.auth.core.util.StpClientUtil;
 import vip.xiaonuo.common.pojo.CommonEntity;
+import vip.xiaonuo.common.util.CommonServletUtil;
 
 import java.util.Date;
 
@@ -52,17 +52,15 @@ public class GlobalConfigure implements WebMvcConfigurer {
         }
 
         private String getUserId() {
-            try {
-                String loginId;
-                try {
-                    loginId = StpUtil.getLoginIdAsString();
-                } catch (Exception e) {
-                    loginId = StpClientUtil.getLoginIdAsString();
-                }
-                return StrUtil.isNotEmpty(loginId) ? loginId : "-1";
-            } catch (Exception e) {
+            // 后台任务没有请求身份；身份存储等非预期故障应继续抛出。
+            if (!CommonServletUtil.isWeb()) {
                 return "-1";
             }
+            Object loginId = StpUtil.getLoginIdDefaultNull();
+            if (loginId == null) {
+                loginId = StpClientUtil.getLoginIdDefaultNull();
+            }
+            return loginId == null ? "-1" : loginId.toString();
         }
     }
 

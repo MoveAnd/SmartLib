@@ -9,7 +9,6 @@ import cn.dev33.satoken.router.SaHttpMethod;
 import cn.dev33.satoken.router.SaRouter;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.CharsetUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.ContentType;
 import cn.hutool.http.Header;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusPropertiesCustomizer;
@@ -149,17 +148,15 @@ public class GlobalConfigure implements WebMvcConfigurer {
         }
 
         private String getUserId() {
-            try {
-                String loginId;
-                try {
-                    loginId = StpUtil.getLoginIdAsString();
-                } catch (Exception e) {
-                    loginId = StpClientUtil.getLoginIdAsString();
-                }
-                return StrUtil.isNotEmpty(loginId) ? loginId : "-1";
-            } catch (Exception e) {
+            // 后台任务没有请求身份；身份存储等非预期故障应继续抛出。
+            if (!CommonServletUtil.isWeb()) {
                 return "-1";
             }
+            Object loginId = StpUtil.getLoginIdDefaultNull();
+            if (loginId == null) {
+                loginId = StpClientUtil.getLoginIdDefaultNull();
+            }
+            return loginId == null ? "-1" : loginId.toString();
         }
     }
 
