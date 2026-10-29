@@ -19,7 +19,6 @@ import vip.xiaonuo.common.enums.CommonExceptionEnum;
 import vip.xiaonuo.common.exception.CommonException;
 
 import java.util.Date;
-import java.util.Locale;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -46,14 +45,12 @@ public class IdempotentRecordServiceImpl implements IdempotentRecordService {
             throw new CommonException(CommonExceptionEnum.ERROR415.getCode(), "不支持的幂等操作类型");
         }
         if (callerScope == null || !callerScope.matches("[\\x21-\\x7e]{1,64}")
-                || idempotencyKey == null || !idempotencyKey.matches("[\\x21-\\x7e]{1,64}")
-                || requestHash == null || !requestHash.matches("[a-fA-F0-9]{64}")) {
-            throw new CommonException(CommonExceptionEnum.ERROR415.getCode(), "调用范围、幂等键或请求摘要格式不正确");
+                || idempotencyKey == null || !idempotencyKey.matches("[\\x21-\\x7e]{1,64}")) {
+            throw new CommonException(CommonExceptionEnum.ERROR415.getCode(), "调用范围或幂等键格式不正确");
         }
-        String normalizedHash = requestHash.toLowerCase(Locale.ROOT);
         IdempotentRecord existing = findByKeyInNewTransaction(callerScope, operation, idempotencyKey);
         if (existing != null) {
-            return handleExistingRecord(existing, normalizedHash);
+            return handleExistingRecord(existing, requestHash);
         }
         if (processingDeadline == null || processingDeadline.getTime() <= System.currentTimeMillis()) {
             throw new CommonException(CommonExceptionEnum.ERROR415.getCode(), "处理核查时间必须晚于当前时间");
@@ -63,7 +60,7 @@ public class IdempotentRecordServiceImpl implements IdempotentRecordService {
         record.setCallerScope(callerScope);
         record.setOperation(operation);
         record.setIdempotencyKey(idempotencyKey);
-        record.setRequestHash(normalizedHash);
+        record.setRequestHash(requestHash);
         record.setStatus(IdempotentStatusEnum.PROCESSING.getValue());
         record.setProcessingDeadline(new Date(processingDeadline.getTime()));
         try {
@@ -74,7 +71,7 @@ public class IdempotentRecordServiceImpl implements IdempotentRecordService {
             if (existing == null) {
                 throw e;
             }
-            return handleExistingRecord(existing, normalizedHash);
+            return handleExistingRecord(existing, requestHash);
         }
         return new IdempotentAcquireResult(true, record.getId(), IdempotentStatusEnum.PROCESSING, null);
     }
