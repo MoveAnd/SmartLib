@@ -14,7 +14,6 @@ package com.smartlib.borrow.core.util;
 
 import cn.dev33.satoken.exception.*;
 import cn.hutool.http.HttpStatus;
-import lombok.extern.slf4j.Slf4j;
 import vip.xiaonuo.common.pojo.CommonResult;
 import vip.xiaonuo.common.util.CommonServletUtil;
 
@@ -24,7 +23,6 @@ import vip.xiaonuo.common.util.CommonServletUtil;
  * @author xuyuxiang
  * @date 2021/10/9 14:24
  **/
-@Slf4j
 public class AuthExceptionUtil {
 
     /**
@@ -33,7 +31,7 @@ public class AuthExceptionUtil {
      * @author xuyuxiang
      * @date 2021/10/11 15:52
      **/
-    public static CommonResult<String> getCommonResult(Exception e) {
+    public static CommonResult<String> getCommonResult(SaTokenException e) {
         CommonResult<String> commonResult;
         if (e instanceof NotLoginException notLoginException) {
 
@@ -52,15 +50,9 @@ public class AuthExceptionUtil {
 
             // 如果是被封禁异常 403
             commonResult = CommonResult.get(HttpStatus.HTTP_FORBIDDEN, "账号被封禁：" + disableServiceException.getDisableTime() + "秒后解封", null);
-        } else if (e instanceof SaTokenException saTokenException) {
-
-            // 如果是SaToken异常 直接返回
-            commonResult = CommonResult.error(saTokenException.getMessage());
         } else {
-            // 未知异常才打印
-            log.error(">>> 服务器未知异常，请求地址：{}，具体信息：", CommonServletUtil.getRequest().getRequestURL(), e);
-            // 未知异常返回服务器异常（此处不可能执行进入，因为本方法处理的一定是SaToken的异常，此处仅为安全性考虑）
-            commonResult = CommonResult.error("服务器异常");
+            // 其他SaToken异常直接返回
+            commonResult = CommonResult.error(e.getMessage());
         }
         return commonResult;
     }

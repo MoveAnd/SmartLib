@@ -107,10 +107,10 @@ public class GlobalExceptionUtil {
             log.error(">>> 文件上传参数异常：", e);
             //文件上传错误特殊提示
             commonResult = CommonResult.error("请选择要上传的文件并检查文件参数名称是否正确");
-        } else if (e instanceof SaTokenException) {
+        } else if (e instanceof SaTokenException saTokenException) {
 
             // 如果是SaToken相关异常，则由AuthExceptionUtil处理
-            return AuthExceptionUtil.getCommonResult(e);
+            return AuthExceptionUtil.getCommonResult(saTokenException);
         } else if(e instanceof MyBatisSystemException) {
 
             // 如果是MyBatisSystemException
