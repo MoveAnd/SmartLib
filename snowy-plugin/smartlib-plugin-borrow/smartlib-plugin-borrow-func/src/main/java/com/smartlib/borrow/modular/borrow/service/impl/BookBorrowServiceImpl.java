@@ -127,9 +127,6 @@ public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBor
     private Page<BookBorrowResult> queryPage(BookBorrowPageParam param,
             LambdaQueryWrapper<BookBorrow> query) {
         Page<BookBorrow> page = CommonPageRequest.defaultPage();
-        if (page.getCurrent() <= 0 || page.getSize() <= 0) {
-            throw new CommonException("页码和每页条数必须大于0");
-        }
         if (StrUtil.isNotBlank(param.getInventoryId())) {
             query.eq(BookBorrow::getInventoryId, param.getInventoryId().trim());
         }
