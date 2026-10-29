@@ -14,8 +14,6 @@ package vip.xiaonuo.dev.feign.provider.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vip.xiaonuo.dev.api.DevConfigApi;
 import vip.xiaonuo.dev.feign.DevConfigFeign;
@@ -41,8 +39,7 @@ public class DevConfigFeignProvider implements DevConfigFeign {
      * @date 2022/11/12 11:11
      */
     @Override
-    @RequestMapping("/feign/dev/config/getValueByKey")
-    public String getValueByKey(@RequestParam("key") String key) {
+    public String getValueByKey(String key) {
         return devConfigApi.getValueByKey(key);
     }
 }
