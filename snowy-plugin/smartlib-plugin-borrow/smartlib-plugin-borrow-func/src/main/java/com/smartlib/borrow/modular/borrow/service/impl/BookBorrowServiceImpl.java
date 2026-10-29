@@ -2,6 +2,7 @@ package com.smartlib.borrow.modular.borrow.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -13,11 +14,17 @@ import com.smartlib.borrow.modular.borrow.param.BookBorrowManagePageParam;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowPageParam;
 import com.smartlib.borrow.modular.borrow.result.BookBorrowResult;
 import com.smartlib.borrow.modular.borrow.service.BookBorrowService;
+import com.smartlib.borrow.modular.quota.service.BorrowUserQuotaService;
+import com.smartlib.book.feign.BookInventoryFeign;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
 import vip.xiaonuo.common.page.CommonPageRequest;
+import vip.xiaonuo.common.pojo.CommonResult;
+
+import java.util.Date;
 
 @Service
 public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBorrow>
@@ -25,6 +32,12 @@ public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBor
 
     @Resource
     private BookBorrowConvert bookBorrowConvert;
+
+    @Resource
+    private BorrowUserQuotaService borrowUserQuotaService;
+
+    @Resource
+    private BookInventoryFeign bookInventoryFeign;
 
     @Override
     public Page<BookBorrowResult> page(BookBorrowManagePageParam param) {
@@ -71,6 +84,44 @@ public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBor
             throw new CommonException("借阅记录不存在");
         }
         return bookBorrowConvert.toResult(record);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void applyReturn(String id, String userId) {
+        BookBorrow update = new BookBorrow();
+        update.setStatus(BookBorrowStatusEnum.RETURNING.getValue());
+        if (!this.update(update, new LambdaUpdateWrapper<BookBorrow>()
+                .eq(BookBorrow::getId, id.trim())
+                .eq(BookBorrow::getUserId, userId)
+                .eq(BookBorrow::getStatus, BookBorrowStatusEnum.BORROWING.getValue()))) {
+            throw new CommonException("借阅记录不存在或当前状态不允许申请归还");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmReturn(String id, String operatorId, String idempotencyKey) {
+        BookBorrow record = this.getById(id.trim());
+        if (record == null) {
+            throw new CommonException("借阅记录不存在");
+        }
+        BookBorrow update = new BookBorrow();
+        update.setStatus(BookBorrowStatusEnum.RETURNED.getValue());
+        update.setReturnTime(new Date());
+        update.setReturnUser(operatorId);
+        // 按原状态更新，同一记录即使使用不同请求号也只能确认一次。
+        if (!this.update(update, new LambdaUpdateWrapper<BookBorrow>()
+                .eq(BookBorrow::getId, record.getId())
+                .eq(BookBorrow::getStatus, BookBorrowStatusEnum.RETURNING.getValue()))) {
+            throw new CommonException("该记录尚未申请归还或已确认归还");
+        }
+        borrowUserQuotaService.releaseQuota(record.getUserId());
+        CommonResult<String> result = bookInventoryFeign.returnStock(
+                record.getInventoryId(), record.getId(), idempotencyKey);
+        if (result.getCode() != CommonResult.CODE_SUCCESS) {
+            throw new CommonException(result.getMsg());
+        }
     }
 
     private Page<BookBorrowResult> queryPage(BookBorrowPageParam param,

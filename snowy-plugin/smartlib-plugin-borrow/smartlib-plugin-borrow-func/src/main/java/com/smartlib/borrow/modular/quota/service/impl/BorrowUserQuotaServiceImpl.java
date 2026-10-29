@@ -1,6 +1,7 @@
 package com.smartlib.borrow.modular.quota.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.smartlib.borrow.modular.quota.convert.BorrowUserQuotaConvert;
 import com.smartlib.borrow.modular.quota.entity.BorrowUserQuota;
 import com.smartlib.borrow.modular.quota.mapper.BorrowUserQuotaMapper;
@@ -47,5 +48,16 @@ public class BorrowUserQuotaServiceImpl extends ServiceImpl<BorrowUserQuotaMappe
             throw new CommonException("借阅名额版本冲突，请重新查询后提交");
         }
         return detail(param.getUserId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void releaseQuota(String userId) {
+        if (!this.update(new BorrowUserQuota(), new LambdaUpdateWrapper<BorrowUserQuota>()
+                .eq(BorrowUserQuota::getUserId, userId)
+                .gt(BorrowUserQuota::getBorrowedCount, 0)
+                .setSql("borrowed_count = borrowed_count - 1, row_version = row_version + 1"))) {
+            throw new CommonException("借阅名额记录不存在或未归还数量异常");
+        }
     }
 }

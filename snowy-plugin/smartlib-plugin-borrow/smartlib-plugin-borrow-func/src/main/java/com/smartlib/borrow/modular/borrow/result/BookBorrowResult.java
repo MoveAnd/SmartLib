@@ -20,7 +20,7 @@ public class BookBorrowResult {
     @Schema(description = "馆藏ID")
     private String inventoryId;
 
-    @Schema(description = "借阅状态：BORROWING未还、RETURNED已还")
+    @Schema(description = "借阅状态：BORROWING未还、RETURNING待确认归还、RETURNED已还")
     private String status;
 
     @Schema(description = "借出时间")

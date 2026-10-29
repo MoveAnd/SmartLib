@@ -18,4 +18,10 @@ public interface BookBorrowService {
 
     /** 在数据库查询中限定读者归属，其他读者的记录按不存在处理。 */
     BookBorrowResult clientDetail(String id, String userId);
+
+    /** 读者申请归还本人借阅的图书，等待管理员确认。 */
+    void applyReturn(String id, String userId);
+
+    /** 全局事务内确认归还，同时释放额度并恢复馆藏库存。 */
+    void confirmReturn(String id, String operatorId, String idempotencyKey);
 }

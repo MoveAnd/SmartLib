@@ -17,6 +17,10 @@
         </dependency>
         <dependency>
             <groupId>vip.xiaonuo</groupId>
+            <artifactId>smartlib-plugin-book-feign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>vip.xiaonuo</groupId>
             <artifactId>snowy-plugin-auth-api</artifactId>
             <exclusions>
                 <exclusion>

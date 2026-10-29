@@ -2,6 +2,7 @@ package com.smartlib.borrow.modular.borrow.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowPageParam;
+import com.smartlib.borrow.modular.borrow.param.BookBorrowIdParam;
 import com.smartlib.borrow.modular.borrow.result.BookBorrowResult;
 import com.smartlib.borrow.modular.borrow.service.BookBorrowService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,11 +14,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vip.xiaonuo.auth.core.annotation.SaClientCheckLogin;
 import vip.xiaonuo.auth.core.util.StpClientUtil;
 import vip.xiaonuo.common.pojo.CommonResult;
+import vip.xiaonuo.common.annotation.CommonLog;
 
 @Tag(name = "C端借阅记录接口")
 @RestController
@@ -41,5 +45,13 @@ public class BookBorrowController {
             @RequestParam("id") @NotBlank(message = "id不能为空")
             @Size(max = 20, message = "id长度不能超过20") String id) {
         return CommonResult.data(bookBorrowService.clientDetail(id, StpClientUtil.getLoginIdAsString()));
+    }
+
+    @Operation(summary = "申请归还本人借阅的图书")
+    @CommonLog("申请归还图书")
+    @PostMapping("/borrow/c/record/applyReturn")
+    public CommonResult<String> applyReturn(@RequestBody @Valid BookBorrowIdParam param) {
+        bookBorrowService.applyReturn(param.getId(), StpClientUtil.getLoginIdAsString());
+        return CommonResult.ok();
     }
 }

@@ -8,4 +8,7 @@ public interface BorrowUserQuotaService {
     BorrowUserQuotaDetailResult detail(String userId);
 
     BorrowUserQuotaDetailResult adjustLimit(BorrowUserQuotaAdjustLimitParam param);
+
+    /** 确认归还后释放一个已占用的借阅名额。 */
+    void releaseQuota(String userId);
 }

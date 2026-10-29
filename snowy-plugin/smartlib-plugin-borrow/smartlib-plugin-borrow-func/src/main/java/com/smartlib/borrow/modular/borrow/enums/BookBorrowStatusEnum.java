@@ -10,6 +10,9 @@ public enum BookBorrowStatusEnum {
     /** 借阅中 */
     BORROWING("BORROWING"),
 
+    /** 已申请归还，等待管理员确认 */
+    RETURNING("RETURNING"),
+
     /** 已确认归还 */
     RETURNED("RETURNED");
 
