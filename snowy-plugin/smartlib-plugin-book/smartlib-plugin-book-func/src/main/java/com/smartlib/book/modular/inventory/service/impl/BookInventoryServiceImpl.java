@@ -3,6 +3,7 @@ package com.smartlib.book.modular.inventory.service.impl;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -154,6 +155,17 @@ public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, B
         inventory.setStatus("OFF_SHELF");
         if (!this.updateById(inventory)) {
             throw new CommonException("馆藏不存在，id值为：{}", id);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void returnStock(String inventoryId) {
+        if (!this.update(new BookInventory(), new LambdaUpdateWrapper<BookInventory>()
+                .eq(BookInventory::getId, inventoryId)
+                .apply("available_stock < total_stock")
+                .setSql("available_stock = available_stock + 1"))) {
+            throw new CommonException("馆藏不存在或可借库存已达总库存");
         }
     }
 }

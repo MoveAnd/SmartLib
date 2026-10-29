@@ -29,4 +29,7 @@ public interface BookInventoryService {
 
     /** 馆藏下架，不影响已借出图书归还。 */
     void offShelf(String id);
+
+    /** 确认归还时恢复一本可借库存，下架馆藏同样允许归还。 */
+    void returnStock(String inventoryId);
 }

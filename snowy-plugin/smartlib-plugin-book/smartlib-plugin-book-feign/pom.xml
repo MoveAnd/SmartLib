@@ -12,6 +12,10 @@
     <packaging>jar</packaging>
     <dependencies>
         <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>vip.xiaonuo</groupId>
             <artifactId>smartlib-plugin-book-api</artifactId>
         </dependency>
