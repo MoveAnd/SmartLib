@@ -17,6 +17,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>vip.xiaonuo</groupId>
+            <artifactId>smartlib-plugin-borrow-feign</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.seata</groupId>
             <artifactId>seata-all</artifactId>
         </dependency>

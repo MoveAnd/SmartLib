@@ -33,7 +33,7 @@ import vip.xiaonuo.common.runner.AppStartupListener;
 @Slf4j
 @RestController
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = "vip.xiaonuo")
+@EnableFeignClients(basePackages = {"vip.xiaonuo", "com.smartlib"})
 @SpringBootApplication(scanBasePackages = {"vip.xiaonuo"}, exclude = {Knife4jAutoConfiguration.class})
 public class SnowyWebApp {
 

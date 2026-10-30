@@ -33,9 +33,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.smartlib.borrow.feign.BorrowUserQuotaFeign;
 import jakarta.annotation.Resource;
 import org.dromara.trans.service.impl.TransService;
 import org.springframework.stereotype.Service;
+import org.apache.seata.spring.annotation.GlobalTransactional;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import vip.xiaonuo.auth.api.AuthApi;
@@ -162,6 +164,9 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
     private ClientUserExtService clientUserExtService;
 
     @Resource
+    private BorrowUserQuotaFeign borrowUserQuotaFeign;
+
+    @Resource
     private ClientUserPasswordService clientUserPasswordService;
 
     @Resource
@@ -227,6 +232,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         return this.page(CommonPageRequest.defaultPage(), queryWrapper);
     }
 
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional(rollbackFor = Exception.class)
     @Override
     public ClientUser add(ClientUserAddParam clientUserAddParam, String sourceFromType) {
@@ -249,6 +255,8 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         this.save(clientUser);
         // 插入扩展信息
         clientUserExtService.createExtInfo(clientUser.getId(), sourceFromType);
+        // 与账户及扩展信息共同提交或回滚，业务初始额度由Borrow设置。
+        borrowUserQuotaFeign.initialize(clientUser.getId());
         return clientUser;
     }
 
@@ -1024,6 +1032,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         }
     }
 
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional(rollbackFor = Exception.class)
     @Override
     public ClientUser createUserWithPhone(String phone) {
@@ -1051,6 +1060,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         return clientUser;
     }
 
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional(rollbackFor = Exception.class)
     @Override
     public ClientUser createUserWithEmail(String email) {
@@ -1080,6 +1090,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         return clientUser;
     }
 
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional(rollbackFor = Exception.class)
     @Override
     public ClientUser createUserWithAccount(String account, String password, String name) {
@@ -1181,6 +1192,7 @@ public class ClientUserServiceImpl extends ServiceImpl<ClientUserMapper, ClientU
         });
     }
 
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void doRegister(String account, String password) {
