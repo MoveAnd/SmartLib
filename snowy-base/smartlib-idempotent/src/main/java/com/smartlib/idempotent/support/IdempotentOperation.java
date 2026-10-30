@@ -7,4 +7,13 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface IdempotentOperation {
     String value();
+
+    /** 仅使用 @RequestBody 参数计算摘要；默认保留全部方法参数的摘要规则。 */
+    boolean requestBodyOnly() default false;
+
+    /** 仅使用具名 @RequestParam 参数计算摘要，排除请求头等参数。 */
+    boolean requestParamsOnly() default false;
+
+    /** 只能参与调用方的全局事务，占位和重放前均要求已有 XID。 */
+    boolean participantOnly() default false;
 }

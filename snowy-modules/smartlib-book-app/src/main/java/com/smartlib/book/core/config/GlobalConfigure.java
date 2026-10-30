@@ -87,6 +87,8 @@ public class GlobalConfigure implements WebMvcConfigurer {
     public SaServletFilter getSaServletFilter() {
         return new SaServletFilter()
                 .addInclude("/**")
+                // Feign 接口交由注解拦截器按各自的 B/C 端注解鉴权。
+                .addExclude("/feign/**")
                 .setAuth(r -> {
                     // B端的接口校验B端登录。
                     SaRouter.match("/**")

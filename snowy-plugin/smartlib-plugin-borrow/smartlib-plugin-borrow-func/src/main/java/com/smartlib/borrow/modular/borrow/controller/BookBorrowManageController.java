@@ -3,6 +3,7 @@ package com.smartlib.borrow.modular.borrow.controller;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.smartlib.borrow.core.consts.IdempotentConstant;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowManagePageParam;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowIdParam;
 import com.smartlib.idempotent.support.IdempotentOperation;
@@ -51,7 +52,7 @@ public class BookBorrowManageController {
 
     @Operation(summary = "确认图书归还")
     @CommonLog("确认图书归还")
-    @IdempotentOperation("CONFIRM_RETURN")
+    @IdempotentOperation(IdempotentConstant.CONFIRM_RETURN)
     @PostMapping("/borrow/record/confirmReturn")
     public CommonResult<String> confirmReturn(@RequestBody @Valid BookBorrowIdParam param,
             @RequestHeader("Idempotency-Key") String idempotencyKey) {
