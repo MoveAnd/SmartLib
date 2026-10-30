@@ -16,7 +16,6 @@ import cn.dev33.satoken.context.SaHolder;
 import cn.dev33.satoken.oauth2.consts.SaOAuth2Consts;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONObject;
@@ -34,7 +33,6 @@ import me.zhyd.oauth.model.AuthResponse;
 import me.zhyd.oauth.model.AuthUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vip.xiaonuo.auth.api.SaBaseLoginUserApi;
 import vip.xiaonuo.auth.core.enums.AuthPlatformEnum;
 import vip.xiaonuo.auth.core.enums.SaClientTypeEnum;
 import vip.xiaonuo.auth.core.protocol.AuthClientFactory;
@@ -50,6 +48,7 @@ import vip.xiaonuo.auth.modular.third.param.AuthThirdRenderParam;
 import vip.xiaonuo.auth.modular.third.param.AuthThirdUserPageParam;
 import vip.xiaonuo.auth.modular.third.result.AuthThirdRenderResult;
 import vip.xiaonuo.auth.modular.third.service.AuthThirdService;
+import vip.xiaonuo.auth.modular.third.service.AuthThirdUserService;
 import vip.xiaonuo.common.cache.CommonCacheOperator;
 import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
@@ -215,11 +214,8 @@ public class AuthThirdServiceImpl extends ServiceImpl<AuthThirdMapper, AuthThird
     @Resource
     private AuthService authService;
 
-    @Resource(name = "loginUserApi")
-    private SaBaseLoginUserApi loginUserApi;
-
-    @Resource(name = "clientLoginUserApi")
-    private SaBaseLoginUserApi clientLoginUserApi;
+    @Resource
+    private AuthThirdUserService authThirdUserService;
 
     @Override
     public AuthThirdRenderResult render(AuthThirdRenderParam authThirdRenderParam) {
@@ -246,7 +242,6 @@ public class AuthThirdServiceImpl extends ServiceImpl<AuthThirdMapper, AuthThird
     }
 
     @SuppressWarnings("ALL")
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public String callback(AuthThirdCallbackParam authThirdCallbackParam, AuthCallback authCallback) {
         // 校验认证源是否存在
@@ -305,17 +300,13 @@ public class AuthThirdServiceImpl extends ServiceImpl<AuthThirdMapper, AuthThird
             // 根据第三方用户id和平台标识获取用户信息
             AuthThirdUser authThirdUser = this.getOne(new LambdaQueryWrapper<AuthThirdUser>().eq(AuthThirdUser::getThirdId, uuid)
                     .eq(AuthThirdUser::getCategory, platform));
-            // 定义系统用户id
-            String userId;
-            if(ObjectUtil.isEmpty(authThirdUser)) {
-                // 如果三方用户不存在，自动创建本地用户并绑定
-                userId = this.createAndBindUser(authUser, platform, clientType);
-            } else {
-                // 否则直接获取用户id，判断是否存在（有可能没绑定）
-                userId = authThirdUser.getUserId();
-                if(ObjectUtil.isEmpty(userId)) {
-                    // 三方用户存在但未绑定本地用户，自动创建并绑定
-                    userId = this.createAndBindUserForExistThird(authUser, authThirdUser, platform, clientType);
+            String userId = ObjectUtil.isEmpty(authThirdUser) ? null : authThirdUser.getUserId();
+            if (ObjectUtil.isEmpty(userId)) {
+                // 通过独立Bean开启事务，账户、额度及绑定提交后再登录。
+                if (SaClientTypeEnum.C.getValue().equals(clientType)) {
+                    userId = authThirdUserService.createAndBindClientUser(authUser, authThirdUser, platform);
+                } else {
+                    userId = authThirdUserService.createAndBindUser(authUser, authThirdUser, platform);
                 }
             }
             // 登录设备
@@ -657,125 +648,5 @@ public class AuthThirdServiceImpl extends ServiceImpl<AuthThirdMapper, AuthThird
                     .set("publicKey", devConfigApi.getValueByKey(SNOWY_THIRD_ALIPAY_PUBLIC_KEY_KEY)));
         }
         return authClient;
-    }
-
-    /**
-     * 创建本地用户并绑定三方用户（三方用户记录不存在的情况）
-     *
-     * @param authUser 第三方用户信息
-     * @param platform 平台标识
-     * @param clientType 登录端类型
-     * @return 创建的本地用户ID
-     *
-     * @author yubaoshan
-     * @date 2025/06/26
-     */
-    private String createAndBindUser(AuthUser authUser, String platform, String clientType) {
-        // 自动创建本地用户
-        String userId = this.autoCreateUser(authUser, platform, clientType);
-
-        // 插入三方用户记录并绑定
-        AuthThirdUser authThirdUser = new AuthThirdUser();
-        authThirdUser.setThirdId(authUser.getUuid());
-        authThirdUser.setUserId(userId);
-        authThirdUser.setAvatar(authUser.getAvatar());
-        authThirdUser.setName(authUser.getUsername());
-        authThirdUser.setNickname(authUser.getNickname());
-        authThirdUser.setGender(authUser.getGender() != null ? authUser.getGender().getDesc() : "未知");
-        authThirdUser.setCategory(platform);
-        authThirdUser.setExtJson(JSONUtil.toJsonStr(authUser.getRawUserInfo()));
-        this.save(authThirdUser);
-
-        log.info(">>> SSO登录自动创建用户成功，userId={}, thirdId={}, source={}", userId, authUser.getUuid(), platform);
-
-        return userId;
-    }
-
-    /**
-     * 为已存在的三方用户创建本地用户并绑定（三方用户记录存在但未绑定的情况）
-     *
-     * @param authUser 第三方用户信息
-     * @param authThirdUser 已存在的三方用户记录
-     * @param platform 平台标识
-     * @param clientType 登录端类型
-     * @return 创建的本地用户ID
-     *
-     * @author yubaoshan
-     * @date 2025/06/26
-     */
-    private String createAndBindUserForExistThird(AuthUser authUser, AuthThirdUser authThirdUser, String platform, String clientType) {
-        // 自动创建本地用户
-        String userId = this.autoCreateUser(authUser, platform, clientType);
-
-        // 更新三方用户记录，绑定userId
-        authThirdUser.setUserId(userId);
-        this.updateById(authThirdUser);
-
-        log.info(">>> SSO登录为已存在三方用户创建本地用户并绑定成功，userId={}, thirdId={}, source={}", userId, authUser.getUuid(), platform);
-
-        return userId;
-    }
-
-    /**
-     * 自动创建本地用户
-     *
-     * @author yubaoshan
-     * @date 2024/07/05
-     */
-    private String autoCreateUser(AuthUser authUser, String platform, String clientType) {
-        String email = authUser.getEmail();
-        String phone = platform.equalsIgnoreCase("phone") ? authUser.getUsername() : null;
-        String userId;
-
-        // 生成账号：来源 + "_" + 完整UUID，保证全局唯一性，避免截取导致的冲突
-        String account = platform.toLowerCase() + "_" + authUser.getUuid();
-
-        // 生成美观的默认名称（昵称）
-        String name = authUser.getNickname();
-        if (StrUtil.isBlank(name)) {
-            name = authUser.getUsername();
-        }
-        if (StrUtil.isBlank(name)) {
-            name = getFriendlyPlatformName(platform) + "用户_" + RandomUtil.randomString(10);
-        }
-
-        if (SaClientTypeEnum.B.getValue().equals(clientType)) {
-            if (StrUtil.isNotBlank(phone)) {
-                userId = loginUserApi.createUserWithPhone(phone).getId();
-            } else if (StrUtil.isNotBlank(email)) {
-                userId = loginUserApi.createUserWithEmail(email).getId();
-            } else {
-                String randomPassword = RandomUtil.randomString(16);
-                userId = loginUserApi.createUserWithAccount(account, randomPassword, name).getId();
-            }
-        } else {
-            if (StrUtil.isNotBlank(phone)) {
-                userId = clientLoginUserApi.createClientUserWithPhone(phone).getId();
-            } else if (StrUtil.isNotBlank(email)) {
-                userId = clientLoginUserApi.createClientUserWithEmail(email).getId();
-            } else {
-                String randomPassword = RandomUtil.randomString(16);
-                userId = clientLoginUserApi.createClientUserWithAccount(account, randomPassword, name).getId();
-            }
-        }
-        return userId;
-    }
-
-    /**
-     * 获取友好的平台名称
-     *
-     * @author yubaoshan
-     * @date 2024/07/05
-     */
-    private String getFriendlyPlatformName(String source) {
-        if (StrUtil.isBlank(source)) {
-            return "第三方";
-        }
-        for (AuthPlatformEnum platformEnum : AuthPlatformEnum.values()) {
-            if (platformEnum.getValue().equalsIgnoreCase(source)) {
-                return platformEnum.getDescription();
-            }
-        }
-        return source;
     }
 }

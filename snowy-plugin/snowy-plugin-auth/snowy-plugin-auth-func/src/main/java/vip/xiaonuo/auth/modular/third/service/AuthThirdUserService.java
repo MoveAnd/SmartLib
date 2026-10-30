@@ -24,6 +24,12 @@ import vip.xiaonuo.auth.modular.third.entity.AuthThirdUser;
  **/
 public interface AuthThirdUserService extends IService<AuthThirdUser> {
 
+    /** 在本地事务中创建B端账户并新增或更新第三方绑定。 */
+    String createAndBindUser(AuthUser authUser, AuthThirdUser authThirdUser, String platform);
+
+    /** 在全局事务中创建C端账户、初始化额度并新增或更新第三方绑定。 */
+    String createAndBindClientUser(AuthUser authUser, AuthThirdUser authThirdUser, String platform);
+
     /**
      * 保存三方用户
      *
