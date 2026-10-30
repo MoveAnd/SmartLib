@@ -36,7 +36,9 @@ tmp/
 .flattened-pom.xml
 
 # Local deployment files and working documents
-/docs/
+/.scratch/
+/docs/*
+!/docs/sql/
 /performance/
 /apache-seata-2.1.0-incubating-bin/
 
