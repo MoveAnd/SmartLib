@@ -29,4 +29,7 @@ public final class FeignConstant {
     /** BOOK_APP **/
     public static final String BOOK_APP = "smartlib-book-app";
 
+    /** BORROW_APP **/
+    public static final String BORROW_APP = "smartlib-borrow-app";
+
 }

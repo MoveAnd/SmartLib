@@ -10,6 +10,7 @@ import com.smartlib.borrow.modular.quota.result.BorrowUserQuotaDetailResult;
 import com.smartlib.borrow.modular.quota.service.BorrowUserQuotaService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 import vip.xiaonuo.common.exception.CommonException;
 
@@ -33,6 +34,25 @@ public class BorrowUserQuotaServiceImpl extends ServiceImpl<BorrowUserQuotaMappe
         BorrowUserQuotaDetailResult result = borrowUserQuotaConvert.toResult(quota);
         result.setRemainingCount(Math.max(result.getBorrowLimit() - result.getBorrowedCount(), 0));
         return result;
+    }
+
+    @Override
+    public void initialize(String userId) {
+        if (this.getById(userId) == null) {
+            BorrowUserQuota quota = new BorrowUserQuota();
+            quota.setUserId(userId);
+            quota.setBorrowLimit(5);
+            quota.setBorrowedCount(0);
+            quota.setRowVersion(0L);
+            try {
+                this.save(quota);
+            } catch (DuplicateKeyException e) {
+                // 并发初始化由主键兜底；在失败的插入结束后读取已提交记录。
+                if (this.getById(userId) == null) {
+                    throw e;
+                }
+            }
+        }
     }
 
     @Override
