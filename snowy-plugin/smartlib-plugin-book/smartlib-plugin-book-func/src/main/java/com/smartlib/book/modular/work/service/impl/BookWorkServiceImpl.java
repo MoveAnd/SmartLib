@@ -18,15 +18,35 @@ import com.smartlib.book.modular.work.result.BookWorkSummaryResult;
 import com.smartlib.book.modular.work.service.BookWorkService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import vip.xiaonuo.common.cache.CommonCacheOperator;
 import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
 import vip.xiaonuo.common.page.CommonPageRequest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> implements BookWorkService {
+
+    /**
+     * 作品详情缓存前缀
+     */
+    private static final String WORK_DETAIL_CACHE_KEY = "book:work:detail:";
+
+    /**
+     * 作品详情缓存最长有效期（秒）
+     */
+    private static final long WORK_DETAIL_CACHE_TTL_SECONDS = 1800;
+
+    /**
+     * 随机提前过期的最大秒数，使有效期分散在 25～30 分钟
+     */
+    private static final long WORK_DETAIL_CACHE_TTL_JITTER_SECONDS = 300;
+
+    @Resource
+    private CommonCacheOperator commonCacheOperator;
 
     @Resource
     private BookAuthorMapper bookAuthorMapper;
@@ -83,6 +103,11 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
 
     @Override
     public BookWorkDetailResult detail(String key) {
+        String cacheKey = WORK_DETAIL_CACHE_KEY + key;
+        BookWorkDetailResult cached = (BookWorkDetailResult) commonCacheOperator.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
         // data 默认不加载，详情显式查询。
         BookWork work = this.getOne(new LambdaQueryWrapper<BookWork>()
                 .select(BookWork::getKey, BookWork::getTitle, BookWork::getData).eq(BookWork::getKey, key));
@@ -96,8 +121,11 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
                         + " AND delete_flag = 'NOT_DELETE')", key)
                 .orderByAsc(BookAuthor::getKey));
         result.setAuthors(bookWorkConvert.toAuthorSummaries(authors));
+        long cacheTtlSeconds = WORK_DETAIL_CACHE_TTL_SECONDS
+                - ThreadLocalRandom.current().nextLong(WORK_DETAIL_CACHE_TTL_JITTER_SECONDS + 1);
         JsonNode data = work.getData();
         if (data == null || !data.isObject()) {
+            commonCacheOperator.put(cacheKey, result, cacheTtlSeconds);
             return result;
         }
         JsonNode description = data.path("description");
@@ -121,6 +149,7 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
             }
         }
         result.setSubjects(subjects);
+        commonCacheOperator.put(cacheKey, result, cacheTtlSeconds);
         return result;
     }
 }
