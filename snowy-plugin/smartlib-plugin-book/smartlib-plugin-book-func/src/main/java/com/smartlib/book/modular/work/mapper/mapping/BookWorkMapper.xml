@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartlib.book.modular.work.mapper.BookWorkMapper">
+
+    <select id="selectWorkPage" resultType="com.smartlib.book.modular.work.entity.BookWork">
+        SELECT w.`key`, w.title
+        FROM works w
+        WHERE w.delete_flag = 'NOT_DELETE'
+        <if test="param.searchKey != null">
+            AND w.title LIKE CONCAT('%', #{param.searchKey}, '%')
+        </if>
+        <if test="param.authorKey != null">
+            AND w.`key` IN (
+                SELECT aw.work_key
+                FROM author_works aw
+                WHERE aw.author_key = #{param.authorKey}
+                  AND aw.delete_flag = 'NOT_DELETE'
+            )
+        </if>
+        ORDER BY
+        <choose>
+            <when test="param.sortField == 'title' and param.sortOrder == 'ascend'">
+                w.title ASC, w.`key` ASC
+            </when>
+            <when test="param.sortField == 'title' and param.sortOrder == 'descend'">
+                w.title DESC, w.`key` ASC
+            </when>
+            <when test="param.sortField == 'key' and param.sortOrder == 'descend'">
+                w.`key` DESC
+            </when>
+            <otherwise>
+                w.`key` ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="countWorks" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM works w
+        WHERE w.delete_flag = 'NOT_DELETE'
+        <if test="param.searchKey != null">
+            AND w.title LIKE CONCAT('%', #{param.searchKey}, '%')
+        </if>
+        <if test="param.authorKey != null">
+            AND w.`key` IN (
+                SELECT aw.work_key
+                FROM author_works aw
+                WHERE aw.author_key = #{param.authorKey}
+                  AND aw.delete_flag = 'NOT_DELETE'
+            )
+        </if>
+    </select>
+
+</mapper>

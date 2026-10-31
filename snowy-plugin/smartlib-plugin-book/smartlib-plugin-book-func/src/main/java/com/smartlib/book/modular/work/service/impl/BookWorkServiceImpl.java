@@ -3,7 +3,6 @@ package com.smartlib.book.modular.work.service.impl;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -60,44 +59,36 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
         if (page.getSize() <= 0) {
             throw new CommonException("每页条数必须大于0");
         }
-        QueryWrapper<BookWork> query = new QueryWrapper<BookWork>().checkSqlInjection();
-        String searchKey = StrUtil.trim(param.getSearchKey());
-        query.lambda().like(StrUtil.isNotBlank(searchKey), BookWork::getTitle, searchKey);
-        if (StrUtil.isNotBlank(param.getAuthorKey())) {
-            query.apply("`key` IN (SELECT work_key FROM author_works WHERE author_key = {0}"
-                    + " AND delete_flag = 'NOT_DELETE')", param.getAuthorKey().trim());
-        }
-        // 计数复用筛选条件，不携带列表的查询字段和排序。
-        QueryWrapper<BookWork> countQuery = query.clone();
-        query.lambda().select(BookWork::getKey, BookWork::getTitle);
+
         if (ObjectUtil.isAllNotEmpty(param.getSortField(), param.getSortOrder())) {
             CommonSortOrderEnum.validate(param.getSortOrder());
-            boolean asc = CommonSortOrderEnum.ASC.getValue().equals(param.getSortOrder());
-            if ("title".equals(param.getSortField())) {
-                query.lambda().orderBy(true, asc, BookWork::getTitle).orderByAsc(BookWork::getKey);
-            } else if ("key".equals(param.getSortField())) {
-                query.lambda().orderBy(true, asc, BookWork::getKey);
-            } else {
+            if (!"title".equals(param.getSortField()) && !"key".equals(param.getSortField())) {
                 throw new CommonException("不支持的排序字段：{}", param.getSortField());
             }
-        } else {
-            query.lambda().orderByAsc(BookWork::getKey);
         }
+
+        String searchKey = StrUtil.trim(param.getSearchKey());
+        param.setSearchKey(StrUtil.isBlank(searchKey) ? null : searchKey);
+        String authorKey = param.getAuthorKey();
+        param.setAuthorKey(StrUtil.isBlank(authorKey) ? null : authorKey.trim());
+
+        page.setCountId("countWorks");
         if (page.getCurrent() == 1) {
             // 首屏不足一页时，已取得全部匹配记录，无需再扫描一次统计总数。
             // 保留原 LIKE 条件，避免全文分词、停用词等改变搜索结果。
             page.setSearchCount(false);
-            page = this.page(page, query);
+            page = baseMapper.selectWorkPage(page, param);
             if (page.getRecords().size() < page.getSize()) {
                 page.setTotal(page.getRecords().size());
             } else {
-                page.setTotal(this.count(countQuery));
+                page.setTotal(baseMapper.countWorks(param));
             }
         } else {
-            page = this.page(page, query);
+            page = baseMapper.selectWorkPage(page, param);
         }
         Page<BookWorkSummaryResult> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         result.setRecords(bookWorkConvert.toSummaries(page.getRecords()));
+
         return result;
     }
 
