@@ -72,6 +72,19 @@ public class BorrowUserQuotaServiceImpl extends ServiceImpl<BorrowUserQuotaMappe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void occupyQuota(String userId, int count) {
+        if (count <= 0) {
+            throw new CommonException("借阅数量必须大于0");
+        }
+        BorrowUserQuota quota = new BorrowUserQuota();
+        quota.setUserId(userId);
+        if (this.baseMapper.occupyQuota(quota, count) != 1) {
+            throw new CommonException("借阅名额不存在或剩余名额不足");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void releaseQuota(String userId) {
         if (!this.update(new BorrowUserQuota(), new LambdaUpdateWrapper<BorrowUserQuota>()
                 .eq(BorrowUserQuota::getUserId, userId)

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartlib.borrow.modular.quota.mapper.BorrowUserQuotaMapper">
+
+    <update id="occupyQuota">
+        UPDATE borrow_user_quota
+        SET borrowed_count = borrowed_count + #{count},
+            row_version    = row_version + 1,
+            update_time    = #{et.updateTime},
+            update_user    = #{et.updateUser}
+        WHERE user_id = #{et.userId}
+          AND delete_flag = 'NOT_DELETE'
+          AND borrowed_count + #{count} &lt;= borrow_limit
+    </update>
+
+</mapper>

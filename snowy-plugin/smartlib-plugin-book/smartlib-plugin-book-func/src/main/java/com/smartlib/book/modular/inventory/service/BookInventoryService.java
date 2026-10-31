@@ -32,4 +32,7 @@ public interface BookInventoryService {
 
     /** 确认归还时恢复一本可借库存，下架馆藏同样允许归还。 */
     void returnStock(String inventoryId);
+
+    /** 仅允许借出已上架且有库存的馆藏，原子扣减一本可借库存。 */
+    void borrowStock(String inventoryId);
 }

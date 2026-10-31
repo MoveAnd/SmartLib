@@ -160,6 +160,18 @@ public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, B
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void borrowStock(String inventoryId) {
+        if (!this.update(new BookInventory(), new LambdaUpdateWrapper<BookInventory>()
+                .eq(BookInventory::getId, inventoryId)
+                .eq(BookInventory::getStatus, "ON_SHELF")
+                .gt(BookInventory::getAvailableStock, 0)
+                .setSql("available_stock = available_stock - 1"))) {
+            throw new CommonException("馆藏不存在、未上架或可借库存不足");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void returnStock(String inventoryId) {
         if (!this.update(new BookInventory(), new LambdaUpdateWrapper<BookInventory>()
                 .eq(BookInventory::getId, inventoryId)

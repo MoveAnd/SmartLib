@@ -1,8 +1,11 @@
 package com.smartlib.borrow.modular.borrow.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.smartlib.borrow.core.consts.IdempotentConstant;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowPageParam;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowIdParam;
+import com.smartlib.borrow.modular.borrow.param.BookBorrowParam;
+import com.smartlib.idempotent.support.IdempotentOperation;
 import com.smartlib.borrow.modular.borrow.result.BookBorrowResult;
 import com.smartlib.borrow.modular.borrow.service.BookBorrowService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,11 +20,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import vip.xiaonuo.auth.core.annotation.SaClientCheckLogin;
 import vip.xiaonuo.auth.core.util.StpClientUtil;
 import vip.xiaonuo.common.pojo.CommonResult;
 import vip.xiaonuo.common.annotation.CommonLog;
+import java.util.List;
 
 @Tag(name = "C端借阅记录接口")
 @RestController
@@ -31,6 +36,16 @@ public class BookBorrowController {
 
     @Resource
     private BookBorrowService bookBorrowService;
+
+    @Operation(summary = "批量借阅图书，默认借期14天")
+    @CommonLog("借阅图书")
+    @IdempotentOperation(value = IdempotentConstant.BORROW, requestBodyOnly = true)
+    @PostMapping("/borrow/c/record/borrow")
+    public CommonResult<List<BookBorrowResult>> borrow(@RequestBody @Valid BookBorrowParam param,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
+        String userId = StpClientUtil.getLoginIdAsString();
+        return CommonResult.data(bookBorrowService.borrow(param, userId, idempotencyKey));
+    }
 
     @Operation(summary = "分页查询本人借阅记录")
     @GetMapping("/borrow/c/record/page")

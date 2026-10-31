@@ -3,9 +3,14 @@ package com.smartlib.borrow.modular.borrow.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowManagePageParam;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowPageParam;
+import com.smartlib.borrow.modular.borrow.param.BookBorrowParam;
 import com.smartlib.borrow.modular.borrow.result.BookBorrowResult;
+import java.util.List;
 
 public interface BookBorrowService {
+
+    /** 全局事务内批量借阅，每个馆藏一本，借期14天。 */
+    List<BookBorrowResult> borrow(BookBorrowParam param, String userId, String idempotencyKey);
 
     /** 管理端按读者、馆藏及状态查询借阅记录。 */
     Page<BookBorrowResult> page(BookBorrowManagePageParam param);

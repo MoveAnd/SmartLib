@@ -9,14 +9,27 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 import vip.xiaonuo.common.pojo.CommonResult;
+import vip.xiaonuo.auth.core.annotation.SaClientCheckLogin;
 
-/** 馆藏归还事务参与方。 */
+import java.util.List;
+
+/** 馆藏借还事务参与方。 */
 @RequiredArgsConstructor
 @RestController
 @Validated
 public class BookInventoryFeignProvider implements BookInventoryFeign {
 
     private final BookInventoryService bookInventoryService;
+
+    @Override
+    @SaClientCheckLogin
+    @IdempotentOperation(value = IdempotentConstant.BORROW_STOCK, requestParamsOnly = true, participantOnly = true)
+    public CommonResult<String> borrowStock(List<String> inventoryIds, String idempotencyKey) {
+        for (String inventoryId : inventoryIds) {
+            bookInventoryService.borrowStock(inventoryId);
+        }
+        return CommonResult.ok();
+    }
 
     @Override
     @SaCheckLogin

@@ -14,4 +14,7 @@ public interface BorrowUserQuotaService {
 
     /** 确认归还后释放一个已占用的借阅名额。 */
     void releaseQuota(String userId);
+
+    /** 批量占用借阅名额，同时锁定读者额度行直到事务结束。 */
+    void occupyQuota(String userId, int count);
 }

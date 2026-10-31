@@ -12,6 +12,7 @@ import com.smartlib.borrow.modular.borrow.enums.BookBorrowStatusEnum;
 import com.smartlib.borrow.modular.borrow.mapper.BookBorrowMapper;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowManagePageParam;
 import com.smartlib.borrow.modular.borrow.param.BookBorrowPageParam;
+import com.smartlib.borrow.modular.borrow.param.BookBorrowParam;
 import com.smartlib.borrow.modular.borrow.result.BookBorrowResult;
 import com.smartlib.borrow.modular.borrow.service.BookBorrowService;
 import com.smartlib.borrow.modular.quota.service.BorrowUserQuotaService;
@@ -25,10 +26,16 @@ import vip.xiaonuo.common.page.CommonPageRequest;
 import vip.xiaonuo.common.pojo.CommonResult;
 
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBorrow>
         implements BookBorrowService {
+
+    private static final int DEFAULT_BORROW_DAYS = 14;
 
     @Resource
     private BookBorrowConvert bookBorrowConvert;
@@ -38,6 +45,47 @@ public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBor
 
     @Resource
     private BookInventoryFeign bookInventoryFeign;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<BookBorrowResult> borrow(BookBorrowParam param, String userId, String idempotencyKey) {
+        // 固定馆藏加锁顺序，减少交叉批量借阅时的死锁。
+        List<String> inventoryIds = param.getInventoryIds().stream().map(String::trim).sorted().toList();
+        if (new HashSet<>(inventoryIds).size() != inventoryIds.size()) {
+            throw new CommonException("同一批次不能重复借阅同一馆藏");
+        }
+        borrowUserQuotaService.occupyQuota(userId, inventoryIds.size());
+        // 额度行已锁定，同一读者的并发请求在此串行检查。
+        // FOR UPDATE 使用当前读，避免 MySQL REPEATABLE READ 读取到旧快照。
+        if (!this.list(new LambdaQueryWrapper<BookBorrow>()
+                .select(BookBorrow::getId)
+                .eq(BookBorrow::getUserId, userId)
+                .in(BookBorrow::getInventoryId, inventoryIds)
+                .ne(BookBorrow::getStatus, BookBorrowStatusEnum.RETURNED.getValue())
+                .last("FOR UPDATE")).isEmpty()) {
+            throw new CommonException("存在尚未归还的同一馆藏，不能重复借阅");
+        }
+        Date borrowedAt = new Date();
+        Date dueAt = Date.from(borrowedAt.toInstant().plus(DEFAULT_BORROW_DAYS, ChronoUnit.DAYS));
+        List<BookBorrow> records = new ArrayList<>();
+        for (String inventoryId : inventoryIds) {
+            BookBorrow record = new BookBorrow();
+            record.setUserId(userId);
+            record.setInventoryId(inventoryId);
+            record.setStatus(BookBorrowStatusEnum.BORROWING.getValue());
+            record.setBorrowTime(borrowedAt);
+            record.setDueTime(dueAt);
+            if (!this.save(record)) {
+                throw new CommonException("借阅记录保存失败");
+            }
+            records.add(record);
+        }
+        CommonResult<String> result = bookInventoryFeign.borrowStock(inventoryIds, idempotencyKey);
+        if (result.getCode() != CommonResult.CODE_SUCCESS) {
+            throw new CommonException(result.getMsg());
+        }
+        return bookBorrowConvert.toResults(records);
+    }
 
     @Override
     public Page<BookBorrowResult> page(BookBorrowManagePageParam param) {
