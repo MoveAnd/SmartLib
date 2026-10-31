@@ -17,6 +17,7 @@ import com.smartlib.book.modular.edition.result.BookEditionSummaryResult;
 import com.smartlib.book.modular.edition.service.BookEditionService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import vip.xiaonuo.common.cache.CommonCacheOperator;
 import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
 import vip.xiaonuo.common.page.CommonPageRequest;
@@ -26,9 +27,28 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookEdition> implements BookEditionService {
+
+    /**
+     * 出版版本详情缓存前缀
+     */
+    private static final String EDITION_DETAIL_CACHE_KEY = "book:edition:detail:";
+
+    /**
+     * 正常详情最长缓存 30 分钟，最多随机提前 5 分钟过期（秒）
+     */
+    private static final long EDITION_DETAIL_CACHE_TTL_SECONDS = 1800;
+
+    /**
+     * 随机提前过期的最大秒数，使有效期分散在 25～30 分钟
+     */
+    private static final long EDITION_DETAIL_CACHE_TTL_JITTER_SECONDS = 300;
+
+    @Resource
+    private CommonCacheOperator commonCacheOperator;
 
     @Resource
     private BookEditionIsbnMapper bookEditionIsbnMapper;
@@ -68,6 +88,13 @@ public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookE
 
     @Override
     public BookEditionDetailResult detail(String key) {
+        // 查Redis缓存
+        String cacheKey = EDITION_DETAIL_CACHE_KEY + key;
+        BookEditionDetailResult cached = (BookEditionDetailResult) commonCacheOperator.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
         // data 默认不加载，详情显式查询。
         BookEdition edition = this.getOne(new LambdaQueryWrapper<BookEdition>()
                 .select(BookEdition::getKey, BookEdition::getTitle, BookEdition::getWorkKey,
@@ -79,46 +106,53 @@ public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookE
         result.setIsbns(bookEditionIsbnMapper.selectList(new LambdaQueryWrapper<BookEditionIsbn>()
                 .select(BookEditionIsbn::getIsbn).eq(BookEditionIsbn::getEditionKey, key)
                 .orderByAsc(BookEditionIsbn::getIsbn)).stream().map(BookEditionIsbn::getIsbn).toList());
+
+        // 解析data
         JsonNode data = edition.getData();
-        if (data == null || !data.isObject()) {
-            return result;
-        }
-        result.setSubtitle(data.path("subtitle").asText(null));
-        JsonNode description = data.path("description");
-        result.setDescription(description.isTextual() ? description.asText() : description.path("value").asText(null));
-        result.setPublishDate(data.path("publish_date").asText(null));
-        JsonNode pages = data.path("number_of_pages");
-        if (pages.isIntegralNumber() && pages.canConvertToInt() && pages.asInt() > 0) {
-            result.setNumberOfPages(pages.asInt());
-        }
-        List<String> publishers = new ArrayList<>();
-        if (data.path("publishers").isArray()) {
-            for (JsonNode publisher : data.path("publishers")) {
-                if (publisher.isTextual() && StrUtil.isNotBlank(publisher.asText())) {
-                    publishers.add(publisher.asText());
+        if (data != null && data.isObject()) {
+            result.setSubtitle(data.path("subtitle").asText(null));
+            JsonNode description = data.path("description");
+            result.setDescription(description.isTextual() ? description.asText() : description.path("value").asText(null));
+            result.setPublishDate(data.path("publish_date").asText(null));
+            JsonNode pages = data.path("number_of_pages");
+            if (pages.isIntegralNumber() && pages.canConvertToInt() && pages.asInt() > 0) {
+                result.setNumberOfPages(pages.asInt());
+            }
+            List<String> publishers = new ArrayList<>();
+            if (data.path("publishers").isArray()) {
+                for (JsonNode publisher : data.path("publishers")) {
+                    if (publisher.isTextual() && StrUtil.isNotBlank(publisher.asText())) {
+                        publishers.add(publisher.asText());
+                    }
                 }
             }
-        }
-        result.setPublishers(publishers);
-        List<String> languages = new ArrayList<>();
-        if (data.path("languages").isArray()) {
-            for (JsonNode language : data.path("languages")) {
-                JsonNode languageKey = language.path("key");
-                if (languageKey.isTextual() && StrUtil.isNotBlank(languageKey.asText())) {
-                    languages.add(languageKey.asText());
+            result.setPublishers(publishers);
+            List<String> languages = new ArrayList<>();
+            if (data.path("languages").isArray()) {
+                for (JsonNode language : data.path("languages")) {
+                    JsonNode languageKey = language.path("key");
+                    if (languageKey.isTextual() && StrUtil.isNotBlank(languageKey.asText())) {
+                        languages.add(languageKey.asText());
+                    }
                 }
             }
-        }
-        result.setLanguages(languages);
-        Set<Long> covers = new LinkedHashSet<>();
-        if (data.path("covers").isArray()) {
-            for (JsonNode cover : data.path("covers")) {
-                if (cover.isIntegralNumber() && cover.canConvertToLong() && cover.asLong() > 0) {
-                    covers.add(cover.asLong());
+            result.setLanguages(languages);
+            Set<Long> covers = new LinkedHashSet<>();
+            if (data.path("covers").isArray()) {
+                for (JsonNode cover : data.path("covers")) {
+                    if (cover.isIntegralNumber() && cover.canConvertToLong() && cover.asLong() > 0) {
+                        covers.add(cover.asLong());
+                    }
                 }
             }
+            result.setCovers(new ArrayList<>(covers));
         }
-        result.setCovers(new ArrayList<>(covers));
+
+        // 写入Redis缓存
+        long ttlSeconds = EDITION_DETAIL_CACHE_TTL_SECONDS
+                - ThreadLocalRandom.current().nextLong(EDITION_DETAIL_CACHE_TTL_JITTER_SECONDS + 1);
+        commonCacheOperator.put(cacheKey, result, ttlSeconds);
+
         return result;
     }
 
