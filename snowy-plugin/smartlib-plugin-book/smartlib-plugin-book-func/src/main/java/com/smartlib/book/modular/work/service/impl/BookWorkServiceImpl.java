@@ -103,24 +103,24 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
 
     @Override
     public BookWorkDetailResult detail(String key) {
+        // 读取Redis缓存
         String cacheKey = WORK_DETAIL_CACHE_KEY + key;
         BookWorkDetailResult cached = (BookWorkDetailResult) commonCacheOperator.get(cacheKey);
         if (cached != null) {
             return cached;
         }
+
         // data 默认不加载，详情显式查询。
         BookWork work = this.getOne(new LambdaQueryWrapper<BookWork>()
                 .select(BookWork::getKey, BookWork::getTitle, BookWork::getData).eq(BookWork::getKey, key));
         if (work == null) {
             throw new CommonException("作品不存在，key值为：{}", key);
         }
+
         BookWorkDetailResult result = bookWorkConvert.toDetail(work);
-        List<BookAuthor> authors = bookAuthorMapper.selectList(new LambdaQueryWrapper<BookAuthor>()
-                .select(BookAuthor::getKey, BookAuthor::getName)
-                .apply("`key` IN (SELECT author_key FROM author_works WHERE work_key = {0}"
-                        + " AND delete_flag = 'NOT_DELETE')", key)
-                .orderByAsc(BookAuthor::getKey));
+        List<BookAuthor> authors = bookAuthorMapper.selectAuthorsByWorkKey(key);
         result.setAuthors(bookWorkConvert.toAuthorSummaries(authors));
+
         long cacheTtlSeconds = WORK_DETAIL_CACHE_TTL_SECONDS
                 - ThreadLocalRandom.current().nextLong(WORK_DETAIL_CACHE_TTL_JITTER_SECONDS + 1);
         JsonNode data = work.getData();
@@ -128,6 +128,8 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
             commonCacheOperator.put(cacheKey, result, cacheTtlSeconds);
             return result;
         }
+
+        // 解析data
         JsonNode description = data.path("description");
         result.setDescription(description.isTextual() ? description.asText() : description.path("value").asText(null));
         result.setFirstPublishDate(data.path("first_publish_date").asText(null));
@@ -149,7 +151,10 @@ public class BookWorkServiceImpl extends ServiceImpl<BookWorkMapper, BookWork> i
             }
         }
         result.setSubjects(subjects);
+
+        // 写入Redis缓存
         commonCacheOperator.put(cacheKey, result, cacheTtlSeconds);
+
         return result;
     }
 }

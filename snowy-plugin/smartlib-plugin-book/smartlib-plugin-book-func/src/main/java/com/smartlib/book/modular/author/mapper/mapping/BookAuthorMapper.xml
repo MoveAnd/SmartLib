@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartlib.book.modular.author.mapper.BookAuthorMapper">
+
+    <select id="selectAuthorsByWorkKey" resultType="com.smartlib.book.modular.author.entity.BookAuthor">
+        SELECT a.`key`, a.name
+        FROM authors a
+        WHERE a.delete_flag = 'NOT_DELETE'
+          AND a.`key` IN (SELECT aw.author_key
+                          FROM author_works aw
+                          WHERE aw.work_key = #{workKey}
+                            AND aw.delete_flag = 'NOT_DELETE')
+        ORDER BY a.`key` ASC
+    </select>
+
+</mapper>
