@@ -12,6 +12,10 @@
     <packaging>jar</packaging>
     <description>图书服务启动应用</description>
     <dependencies>
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-v5-client-spring-boot-starter</artifactId>
+        </dependency>
         <!-- Seata 分布式事务客户端 -->
         <dependency>
             <groupId>org.apache.seata</groupId>

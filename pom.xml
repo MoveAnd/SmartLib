@@ -89,6 +89,7 @@
         <protobuf.java.version>3.21.12</protobuf.java.version>
         <qcloud-cos.version>5.6.199</qcloud-cos.version>
         <redisson.version>3.45.0</redisson.version>
+        <rocketmq-spring.version>2.3.6</rocketmq-spring.version>
         <rustfs-s3.version>2.20.0</rustfs-s3.version>
         <sa-token.version>1.44.0</sa-token.version>
         <seata.version>2.1.0</seata.version>
@@ -144,6 +145,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-v5-client-spring-boot-starter</artifactId>
+                <version>${rocketmq-spring.version}</version>
+            </dependency>
             <!-- snowy-cloud-inner-start -->
             <!-- 借阅服务插件 -->
             <dependency>
