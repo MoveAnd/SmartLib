@@ -61,7 +61,6 @@
         <knife4j.version>4.5.0</knife4j.version>
         <kotlin.version>1.5.32</kotlin.version>
         <lark-sdk.version>2.3.7</lark-sdk.version>
-        <logback.classic.version>1.5.18</logback.classic.version>
         <lombok.version>1.18.30</lombok.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <mapstruct.version>1.6.3</mapstruct.version>
@@ -542,6 +541,11 @@
             <!-- druid -->
             <dependency>
                 <groupId>com.alibaba</groupId>
+                <artifactId>druid</artifactId>
+                <version>${druid.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
                 <artifactId>druid-spring-boot-3-starter</artifactId>
                 <version>${druid.version}</version>
             </dependency>
@@ -870,13 +874,6 @@
                 <groupId>com.github.oshi</groupId>
                 <artifactId>oshi-core</artifactId>
                 <version>${oshi.version}</version>
-            </dependency>
-
-            <!-- logback-classic -->
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${logback.classic.version}</version>
             </dependency>
 
             <!-- gson -->

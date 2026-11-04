@@ -5,6 +5,7 @@ spring:
     active: dev
   config:
     import:
+      - nacos:smartlib-seata-${spring.profiles.active}.yaml?refreshEnabled=false
       - optional:nacos:${spring.application.name}-${spring.profiles.active}.yaml
   main:
     allow-circular-references: true

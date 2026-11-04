@@ -12,7 +12,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @Slf4j
 @EnableDiscoveryClient
 @EnableFeignClients(basePackages = {"com.smartlib", "vip.xiaonuo"})
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.smartlib.borrow", "vip.xiaonuo.common.cache"})
 public class SmartLibBorrowApp {
 
     public static void main(String[] args) {
