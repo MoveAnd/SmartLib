@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 29/10/2026 18:31:20
+ Date: 04/11/2026 22:28:42
 */
 
 SET NAMES utf8mb4;
@@ -37,6 +37,21 @@ CREATE TABLE `book_borrow`  (
   `delete_flag` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '删除标志',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '借阅记录' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for book_borrow_stats
+-- ----------------------------
+DROP TABLE IF EXISTS `book_borrow_stats`;
+CREATE TABLE `book_borrow_stats`  (
+  `edition_key` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '出版版本标识，逻辑关联editions.key',
+  `borrow_count` bigint NOT NULL DEFAULT 0 COMMENT '累计成功借阅次数',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `create_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '创建用户',
+  `update_time` datetime NULL DEFAULT NULL COMMENT '修改时间',
+  `update_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '修改用户',
+  `delete_flag` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NOT_DELETE' COMMENT '删除标志',
+  PRIMARY KEY (`edition_key`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出版版本累计借阅统计' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for book_return_apply
