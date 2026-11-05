@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.smartlib.borrow.feign.BookBorrowStatsFeign;
 import com.smartlib.book.modular.edition.entity.BookEdition;
 import com.smartlib.book.modular.edition.mapper.BookEditionMapper;
 import com.smartlib.book.modular.inventory.convert.BookInventoryConvert;
@@ -22,6 +23,7 @@ import jakarta.annotation.Resource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.apache.seata.spring.annotation.GlobalTransactional;
 import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
 import vip.xiaonuo.common.page.CommonPageRequest;
@@ -35,6 +37,9 @@ public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, B
 
     @Resource
     private BookEditionMapper bookEditionMapper;
+
+    @Resource
+    private BookBorrowStatsFeign bookBorrowStatsFeign;
 
     @Override
     public Page<BookInventoryResult> page(BookInventoryPageParam param) {
@@ -101,6 +106,7 @@ public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, B
     }
 
     @Override
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional(rollbackFor = Exception.class)
     public void add(BookInventoryAddParam param) {
         BookInventory inventory = bookInventoryConvert.toEntity(param);
@@ -116,6 +122,7 @@ public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, B
         } catch (DuplicateKeyException e) {
             throw new CommonException("该出版版本已有馆藏记录，请勿重复新增");
         }
+        bookBorrowStatsFeign.initialize(inventory.getEditionKey());
     }
 
     @Override
