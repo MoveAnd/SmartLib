@@ -12,6 +12,7 @@ import vip.xiaonuo.common.pojo.CommonResult;
 import vip.xiaonuo.auth.core.annotation.SaClientCheckLogin;
 
 import java.util.List;
+import java.util.Map;
 
 /** 馆藏借还事务参与方。 */
 @RequiredArgsConstructor
@@ -20,6 +21,12 @@ import java.util.List;
 public class BookInventoryFeignProvider implements BookInventoryFeign {
 
     private final BookInventoryService bookInventoryService;
+
+    @Override
+    @SaClientCheckLogin
+    public CommonResult<Map<String, String>> editionKeys(List<String> inventoryIds) {
+        return CommonResult.data(bookInventoryService.editionKeys(inventoryIds));
+    }
 
     @Override
     @SaClientCheckLogin

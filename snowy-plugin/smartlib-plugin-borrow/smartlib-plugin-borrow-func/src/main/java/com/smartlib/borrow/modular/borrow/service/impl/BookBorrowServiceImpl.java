@@ -16,6 +16,7 @@ import com.smartlib.borrow.modular.borrow.param.BookBorrowParam;
 import com.smartlib.borrow.modular.borrow.result.BookBorrowResult;
 import com.smartlib.borrow.modular.borrow.service.BookBorrowService;
 import com.smartlib.borrow.modular.quota.service.BorrowUserQuotaService;
+import com.smartlib.borrow.modular.stats.service.BookBorrowStatsService;
 import com.smartlib.book.feign.BookInventoryFeign;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.TreeMap;
 import java.time.temporal.ChronoUnit;
 
 @Service
@@ -45,6 +48,9 @@ public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBor
 
     @Resource
     private BookInventoryFeign bookInventoryFeign;
+
+    @Resource
+    private BookBorrowStatsService bookBorrowStatsService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -83,6 +89,24 @@ public class BookBorrowServiceImpl extends ServiceImpl<BookBorrowMapper, BookBor
         CommonResult<String> result = bookInventoryFeign.borrowStock(inventoryIds, idempotencyKey);
         if (result.getCode() != CommonResult.CODE_SUCCESS) {
             throw new CommonException(result.getMsg());
+        }
+        CommonResult<Map<String, String>> editions = bookInventoryFeign.editionKeys(inventoryIds);
+        if (editions.getCode() != CommonResult.CODE_SUCCESS) {
+            throw new CommonException(editions.getMsg());
+        }
+        Map<String, Integer> counts = new TreeMap<>();
+        for (String inventoryId : inventoryIds) {
+            String editionKey = editions.getData() == null ? null : editions.getData().get(inventoryId);
+            if (StrUtil.isBlank(editionKey)) {
+                throw new CommonException("馆藏缺少出版版本关联，inventoryId：{}", inventoryId);
+            }
+            counts.merge(editionKey, 1, Integer::sum);
+        }
+        // 按出版版本固定更新顺序，减少不同批次交叉更新时的死锁。
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            String editionKey = entry.getKey();
+            int borrowCount = entry.getValue();
+            bookBorrowStatsService.addSuccessfulBorrows(editionKey, borrowCount);
         }
         return bookBorrowConvert.toResults(records);
     }

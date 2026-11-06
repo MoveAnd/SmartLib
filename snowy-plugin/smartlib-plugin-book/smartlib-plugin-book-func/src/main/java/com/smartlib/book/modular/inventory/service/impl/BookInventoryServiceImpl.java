@@ -28,6 +28,10 @@ import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
 import vip.xiaonuo.common.page.CommonPageRequest;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, BookInventory>
         implements BookInventoryService {
@@ -40,6 +44,17 @@ public class BookInventoryServiceImpl extends ServiceImpl<BookInventoryMapper, B
 
     @Resource
     private BookBorrowStatsFeign bookBorrowStatsFeign;
+
+    @Override
+    public Map<String, String> editionKeys(List<String> inventoryIds) {
+        if (inventoryIds.isEmpty()) {
+            return Map.of();
+        }
+        return this.list(new LambdaQueryWrapper<BookInventory>()
+                .select(BookInventory::getId, BookInventory::getEditionKey)
+                .in(BookInventory::getId, inventoryIds)).stream()
+                .collect(Collectors.toMap(BookInventory::getId, BookInventory::getEditionKey));
+    }
 
     @Override
     public Page<BookInventoryResult> page(BookInventoryPageParam param) {

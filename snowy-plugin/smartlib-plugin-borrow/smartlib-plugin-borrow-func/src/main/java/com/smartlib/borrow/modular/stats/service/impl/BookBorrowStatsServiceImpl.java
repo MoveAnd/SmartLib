@@ -7,10 +7,23 @@ import com.smartlib.borrow.modular.stats.service.BookBorrowStatsService;
 import org.springframework.stereotype.Service;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
+import vip.xiaonuo.common.exception.CommonException;
 
 @Service
 public class BookBorrowStatsServiceImpl extends ServiceImpl<BookBorrowStatsMapper, BookBorrowStats>
         implements BookBorrowStatsService {
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void addSuccessfulBorrows(String editionKey, int count) {
+        initialize(editionKey);
+        BookBorrowStats stats = new BookBorrowStats();
+        stats.setEditionKey(editionKey);
+        int updatedRows = baseMapper.addSuccessfulBorrows(stats, count);
+        if (updatedRows != 1) {
+            throw new CommonException("无法累加出版版本的借阅次数：{}", editionKey);
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void initialize(String editionKey) {

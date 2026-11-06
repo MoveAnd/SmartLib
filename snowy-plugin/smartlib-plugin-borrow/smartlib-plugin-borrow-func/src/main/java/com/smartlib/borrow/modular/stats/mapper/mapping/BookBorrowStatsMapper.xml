@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartlib.borrow.modular.stats.mapper.BookBorrowStatsMapper">
+
+    <update id="addSuccessfulBorrows">
+        UPDATE book_borrow_stats
+        SET borrow_count = borrow_count + #{count},
+            update_time  = #{et.updateTime},
+            update_user  = #{et.updateUser}
+        WHERE edition_key = #{et.editionKey}
+          AND delete_flag = 'NOT_DELETE'
+    </update>
+
+</mapper>
