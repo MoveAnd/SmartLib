@@ -11,4 +11,13 @@
           AND delete_flag = 'NOT_DELETE'
     </update>
 
+    <select id="selectBorrowTop10" resultType="com.smartlib.borrow.modular.stats.entity.BookBorrowStats">
+        SELECT edition_key, borrow_count
+        FROM book_borrow_stats
+        WHERE delete_flag = 'NOT_DELETE'
+          AND borrow_count &gt; 0
+        ORDER BY borrow_count DESC, edition_key DESC
+        LIMIT 10
+    </select>
+
 </mapper>
