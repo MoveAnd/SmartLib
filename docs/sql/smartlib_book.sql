@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 29/10/2026 18:31:06
+ Date: 07/11/2026 21:57:53
 */
 
 SET NAMES utf8mb4;
@@ -56,6 +56,39 @@ CREATE TABLE `authors`  (
   CONSTRAINT `ck_authors_data_object` CHECK ((`data` is null) or (json_type(`data`) = _utf8mb4'OBJECT')),
   CONSTRAINT `ck_authors_delete_flag` CHECK (`delete_flag` in (_utf8mb4'NOT_DELETE',_utf8mb4'DELETED'))
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Open Library 作者' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for book_favorite
+-- ----------------------------
+DROP TABLE IF EXISTS `book_favorite`;
+CREATE TABLE `book_favorite`  (
+  `id` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'CID',
+  `edition_key` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT ' editions.key',
+  `status` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'FAVORITED' COMMENT 'FAVORITEDCANCELLED',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `create_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `update_time` datetime NULL DEFAULT NULL,
+  `update_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `delete_flag` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NOT_DELETE',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_book_favorite_user_edition`(`user_id` ASC, `edition_key` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for book_favorite_stats
+-- ----------------------------
+DROP TABLE IF EXISTS `book_favorite_stats`;
+CREATE TABLE `book_favorite_stats`  (
+  `edition_key` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT ' editions.key',
+  `favorite_count` bigint NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `create_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `update_time` datetime NULL DEFAULT NULL,
+  `update_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `delete_flag` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NOT_DELETE',
+  PRIMARY KEY (`edition_key`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for book_inventory
