@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartlib.book.modular.favorite.mapper.BookFavoriteStatsMapper">
+
+    <insert id="insertIfAbsent">
+        INSERT INTO book_favorite_stats (edition_key, favorite_count, create_time, create_user, delete_flag)
+        VALUES (#{et.editionKey}, #{et.favoriteCount}, #{et.createTime}, #{et.createUser}, #{et.deleteFlag})
+        ON DUPLICATE KEY UPDATE edition_key = edition_key
+    </insert>
+
+    <update id="increase">
+        UPDATE book_favorite_stats
+        SET favorite_count = favorite_count + 1,
+            update_time    = #{et.updateTime},
+            update_user    = #{et.updateUser}
+        WHERE edition_key = #{et.editionKey}
+          AND delete_flag = 'NOT_DELETE'
+    </update>
+
+    <update id="decrease">
+        UPDATE book_favorite_stats
+        SET favorite_count = favorite_count - 1,
+            update_time = #{et.updateTime},
+            update_user = #{et.updateUser}
+        WHERE edition_key = #{et.editionKey}
+          AND delete_flag = 'NOT_DELETE'
+          AND favorite_count &gt; 0
+    </update>
+
+</mapper>
