@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartlib.book.modular.favorite.mapper.BookFavoriteMapper">
+
+    <insert id="insertIfAbsent">
+        INSERT INTO book_favorite (id, user_id, edition_key, status, create_time, create_user, delete_flag)
+        VALUES (#{et.id}, #{et.userId}, #{et.editionKey}, #{et.status},
+                #{et.createTime}, #{et.createUser}, #{et.deleteFlag})
+        ON DUPLICATE KEY UPDATE id = id
+    </insert>
+
+</mapper>
