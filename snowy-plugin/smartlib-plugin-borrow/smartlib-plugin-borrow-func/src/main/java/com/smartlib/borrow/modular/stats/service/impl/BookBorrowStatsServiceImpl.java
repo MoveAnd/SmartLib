@@ -2,16 +2,50 @@ package com.smartlib.borrow.modular.stats.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.smartlib.borrow.modular.stats.entity.BookBorrowStats;
+import com.smartlib.borrow.modular.stats.job.BookBorrowRankingRefreshJob;
+import com.smartlib.borrow.modular.stats.result.BookBorrowRankingResult;
 import com.smartlib.borrow.modular.stats.mapper.BookBorrowStatsMapper;
 import com.smartlib.borrow.modular.stats.service.BookBorrowStatsService;
 import org.springframework.stereotype.Service;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 import vip.xiaonuo.common.exception.CommonException;
+import jakarta.annotation.Resource;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
+import org.redisson.client.protocol.ScoredEntry;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 @Service
 public class BookBorrowStatsServiceImpl extends ServiceImpl<BookBorrowStatsMapper, BookBorrowStats>
         implements BookBorrowStatsService {
+    @Resource
+    private RedissonClient redissonClient;
+
+    @Override
+    public List<BookBorrowRankingResult> top10() {
+        Collection<ScoredEntry<String>> entries = redissonClient
+                .<String>getScoredSortedSet(BookBorrowRankingRefreshJob.RANKING_KEY, StringCodec.INSTANCE)
+                .entryRangeReversed(0, 9);
+        if (entries.isEmpty()) {
+            return List.of();
+        }
+        List<BookBorrowRankingResult> results = new ArrayList<>(entries.size());
+        int rank = 1;
+        for (ScoredEntry<String> entry : entries) {
+            BookBorrowRankingResult result = new BookBorrowRankingResult();
+            result.setRank(rank);
+            result.setEditionKey(entry.getValue());
+            result.setBorrowCount(entry.getScore().longValue());
+            results.add(result);
+            rank++;
+        }
+        return results;
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addSuccessfulBorrows(String editionKey, int count) {
