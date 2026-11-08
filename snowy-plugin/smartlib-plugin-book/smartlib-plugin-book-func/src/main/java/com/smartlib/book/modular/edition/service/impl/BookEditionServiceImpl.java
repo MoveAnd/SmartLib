@@ -6,17 +6,24 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.smartlib.book.modular.edition.convert.BookEditionConvert;
 import com.smartlib.book.modular.edition.entity.BookEdition;
 import com.smartlib.book.modular.edition.entity.BookEditionIsbn;
 import com.smartlib.book.modular.edition.mapper.BookEditionIsbnMapper;
 import com.smartlib.book.modular.edition.mapper.BookEditionMapper;
+import com.smartlib.book.modular.edition.param.BookEditionEditParam;
 import com.smartlib.book.modular.edition.param.BookEditionPageParam;
 import com.smartlib.book.modular.edition.result.BookEditionDetailResult;
 import com.smartlib.book.modular.edition.result.BookEditionSummaryResult;
 import com.smartlib.book.modular.edition.service.BookEditionService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vip.xiaonuo.common.cache.CommonCacheOperator;
 import vip.xiaonuo.common.enums.CommonSortOrderEnum;
 import vip.xiaonuo.common.exception.CommonException;
@@ -26,6 +33,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -47,6 +55,18 @@ public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookE
      */
     private static final long EDITION_DETAIL_CACHE_TTL_JITTER_SECONDS = 300;
 
+    /**
+     * 编辑参数字段名与来源 JSON 属性名的对应关系；书名不允许清空。
+     */
+    private static final Map<String, String> CLEARABLE_JSON_FIELDS = Map.of(
+            "subtitle", "subtitle",
+            "description", "description",
+            "publishers", "publishers",
+            "publishDate", "publish_date",
+            "languages", "languages",
+            "numberOfPages", "number_of_pages",
+            "covers", "covers");
+
     @Resource
     private CommonCacheOperator commonCacheOperator;
 
@@ -55,6 +75,119 @@ public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookE
 
     @Resource
     private BookEditionConvert bookEditionConvert;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void edit(BookEditionEditParam param) {
+        String key = param.getKey().trim();
+        BookEdition edition = baseMapper.selectForEdit(key);
+        if (edition == null) {
+            throw new CommonException("出版版本不存在，key值为：{}", key);
+        }
+        if (param.getTitle() == null && param.getSubtitle() == null && param.getDescription() == null
+                && param.getPublishers() == null && param.getPublishDate() == null && param.getLanguages() == null
+                && param.getNumberOfPages() == null && param.getCovers() == null
+                && (param.getClearFields() == null || param.getClearFields().isEmpty())) {
+            return;
+        }
+        if (param.getTitle() != null && StrUtil.isBlank(param.getTitle())) {
+            throw new CommonException("书名不能为空");
+        }
+        JsonNode source = edition.getData();
+        if (source != null && !source.isNull() && !source.isObject()) {
+            throw new CommonException("版本来源数据不是JSON对象，无法编辑");
+        }
+        ObjectNode data = source == null || source.isNull()
+                ? JsonNodeFactory.instance.objectNode() : (ObjectNode) source;
+        BookEdition update = new BookEdition();
+        update.setKey(key);
+        if (param.getTitle() != null) {
+            String title = param.getTitle().trim();
+            data.put("title", title);
+            update.setTitle(title);
+        }
+        applyOptionalFields(data, param);
+        clearOptionalFields(data, param);
+        update.setData(data);
+        this.updateById(update);
+        // 事务回滚时保留旧缓存，提交成功后才使该版本详情失效。
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                commonCacheOperator.remove(EDITION_DETAIL_CACHE_KEY + key);
+            }
+        });
+    }
+
+    private void applyOptionalFields(ObjectNode data, BookEditionEditParam param) {
+        if (param.getSubtitle() != null) {
+            data.put("subtitle", param.getSubtitle());
+        }
+        if (param.getDescription() != null) {
+            data.put("description", param.getDescription());
+        }
+        if (param.getPublishDate() != null) {
+            data.put("publish_date", param.getPublishDate());
+        }
+        if (param.getNumberOfPages() != null) {
+            data.put("number_of_pages", param.getNumberOfPages());
+        }
+        if (param.getPublishers() != null) {
+            if (param.getPublishers().isEmpty()) {
+                data.remove("publishers");
+            } else {
+                ArrayNode publishers = data.putArray("publishers");
+                for (String publisher : param.getPublishers()) {
+                    publishers.add(publisher);
+                }
+            }
+        }
+        if (param.getLanguages() != null) {
+            if (param.getLanguages().isEmpty()) {
+                data.remove("languages");
+            } else {
+                ArrayNode languages = data.putArray("languages");
+                for (String language : param.getLanguages()) {
+                    languages.addObject().put("key", language);
+                }
+            }
+        }
+        if (param.getCovers() != null) {
+            if (param.getCovers().isEmpty()) {
+                data.remove("covers");
+            } else {
+                ArrayNode covers = data.putArray("covers");
+                for (Long cover : param.getCovers()) {
+                    covers.add(cover);
+                }
+            }
+        }
+    }
+
+    private void clearOptionalFields(ObjectNode data, BookEditionEditParam param) {
+        if (param.getClearFields() != null) {
+            for (String field : param.getClearFields()) {
+                String jsonField = CLEARABLE_JSON_FIELDS.get(field);
+                if (jsonField == null) {
+                    throw new CommonException("不支持清空字段：{}", field);
+                }
+                boolean supplied = switch (field) {
+                    case "subtitle" -> param.getSubtitle() != null;
+                    case "description" -> param.getDescription() != null;
+                    case "publishers" -> param.getPublishers() != null;
+                    case "publishDate" -> param.getPublishDate() != null;
+                    case "languages" -> param.getLanguages() != null;
+                    case "numberOfPages" -> param.getNumberOfPages() != null;
+                    case "covers" -> param.getCovers() != null;
+                    default -> false;
+                };
+                if (supplied) {
+                    throw new CommonException("字段不能同时赋值和清空：{}", field);
+                }
+                data.remove(jsonField);
+            }
+        }
+    }
 
     @Override
     public Page<BookEditionSummaryResult> page(BookEditionPageParam param) {

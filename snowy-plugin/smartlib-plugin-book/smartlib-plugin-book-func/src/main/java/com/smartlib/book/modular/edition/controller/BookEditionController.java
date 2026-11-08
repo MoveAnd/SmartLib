@@ -1,6 +1,8 @@
 package com.smartlib.book.modular.edition.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.smartlib.book.modular.edition.param.BookEditionEditParam;
 import com.smartlib.book.modular.edition.param.BookEditionPageParam;
 import com.smartlib.book.modular.edition.result.BookEditionDetailResult;
 import com.smartlib.book.modular.edition.result.BookEditionSummaryResult;
@@ -13,8 +15,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vip.xiaonuo.common.annotation.CommonLog;
 import vip.xiaonuo.common.pojo.CommonResult;
 
 import java.util.List;
@@ -26,6 +31,15 @@ public class BookEditionController {
 
     @Resource
     private BookEditionService bookEditionService;
+
+    @Operation(summary = "编辑出版版本基础信息")
+    @SaCheckLogin
+    @CommonLog("编辑出版版本")
+    @PostMapping("/book/edition/edit")
+    public CommonResult<String> edit(@RequestBody @Valid BookEditionEditParam param) {
+        bookEditionService.edit(param);
+        return CommonResult.ok();
+    }
 
     @Operation(summary = "作品下的版本分页列表")
     @GetMapping("/book/edition/page")
