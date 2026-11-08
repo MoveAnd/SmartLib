@@ -14,11 +14,17 @@ import com.smartlib.book.modular.edition.entity.BookEdition;
 import com.smartlib.book.modular.edition.entity.BookEditionIsbn;
 import com.smartlib.book.modular.edition.mapper.BookEditionIsbnMapper;
 import com.smartlib.book.modular.edition.mapper.BookEditionMapper;
+import com.smartlib.book.modular.edition.param.BookEditionDeleteParam;
 import com.smartlib.book.modular.edition.param.BookEditionEditParam;
 import com.smartlib.book.modular.edition.param.BookEditionPageParam;
 import com.smartlib.book.modular.edition.result.BookEditionDetailResult;
 import com.smartlib.book.modular.edition.result.BookEditionSummaryResult;
 import com.smartlib.book.modular.edition.service.BookEditionService;
+import com.smartlib.book.modular.favorite.entity.BookFavorite;
+import com.smartlib.book.modular.favorite.enums.BookFavoriteStatusEnum;
+import com.smartlib.book.modular.favorite.mapper.BookFavoriteMapper;
+import com.smartlib.book.modular.inventory.entity.BookInventory;
+import com.smartlib.book.modular.inventory.mapper.BookInventoryMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,6 +82,12 @@ public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookE
     @Resource
     private BookEditionConvert bookEditionConvert;
 
+    @Resource
+    private BookInventoryMapper bookInventoryMapper;
+
+    @Resource
+    private BookFavoriteMapper bookFavoriteMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void edit(BookEditionEditParam param) {
@@ -110,7 +122,33 @@ public class BookEditionServiceImpl extends ServiceImpl<BookEditionMapper, BookE
         clearOptionalFields(data, param);
         update.setData(data);
         this.updateById(update);
-        // 事务回滚时保留旧缓存，提交成功后才使该版本详情失效。
+        invalidateDetailCacheAfterCommit(key);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(BookEditionDeleteParam param) {
+        String key = param.getKey().trim();
+        // 与编辑使用同一版本行锁，已删除或不存在的版本跳过关联校验。
+        BookEdition edition = baseMapper.selectForEdit(key);
+        if (edition != null) {
+            if (bookInventoryMapper.exists(new LambdaQueryWrapper<BookInventory>()
+                    .eq(BookInventory::getEditionKey, key))) {
+                throw new CommonException("出版版本存在馆藏记录，不能删除");
+            }
+            if (bookFavoriteMapper.exists(new LambdaQueryWrapper<BookFavorite>()
+                    .eq(BookFavorite::getEditionKey, key)
+                    .eq(BookFavorite::getStatus, BookFavoriteStatusEnum.FAVORITED.getValue()))) {
+                throw new CommonException("出版版本存在有效收藏，不能删除");
+            }
+            this.removeById(key);
+        }
+        // 重试同样清理缓存，修复先前提交成功但缓存删除失败的遗留数据。
+        invalidateDetailCacheAfterCommit(key);
+    }
+
+    /** 事务回滚时保留旧缓存，提交成功后才使该版本详情失效。 */
+    private void invalidateDetailCacheAfterCommit(String key) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {

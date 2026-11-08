@@ -2,6 +2,7 @@ package com.smartlib.book.modular.edition.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.smartlib.book.modular.edition.param.BookEditionDeleteParam;
 import com.smartlib.book.modular.edition.param.BookEditionEditParam;
 import com.smartlib.book.modular.edition.param.BookEditionPageParam;
 import com.smartlib.book.modular.edition.result.BookEditionDetailResult;
@@ -38,6 +39,15 @@ public class BookEditionController {
     @PostMapping("/book/edition/edit")
     public CommonResult<String> edit(@RequestBody @Valid BookEditionEditParam param) {
         bookEditionService.edit(param);
+        return CommonResult.ok();
+    }
+
+    @Operation(summary = "删除出版版本")
+    @SaCheckLogin
+    @CommonLog("删除出版版本")
+    @PostMapping("/book/edition/delete")
+    public CommonResult<String> delete(@RequestBody @Valid BookEditionDeleteParam param) {
+        bookEditionService.delete(param);
         return CommonResult.ok();
     }
 
