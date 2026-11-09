@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 07/11/2026 21:57:53
+ Date: 09/11/2026 14:53:46
 */
 
 SET NAMES utf8mb4;
@@ -175,6 +175,30 @@ CREATE TABLE `idempotent_record`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_idempotent_record_scope_operation_key`(`caller_scope` ASC, `operation` ASC, `idempotency_key` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '通用幂等记录' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for outbox
+-- ----------------------------
+DROP TABLE IF EXISTS `outbox`;
+CREATE TABLE `outbox`  (
+  `id` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事件唯一标识',
+  `aggregate_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '聚合类型',
+  `aggregate_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '聚合标识',
+  `event_type` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '事件类型',
+  `payload` json NULL COMMENT '事件内容',
+  `status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'PENDING' COMMENT '投递状态（PENDING：待投递，SENT：已投递）',
+  `retry_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '累计投递失败次数',
+  `next_retry_time` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '下次可投递时间',
+  `last_error` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最近一次投递失败原因',
+  `sent_time` datetime(3) NULL DEFAULT NULL COMMENT '消息投递确认时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `create_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '创建用户',
+  `update_time` datetime NULL DEFAULT NULL COMMENT '修改时间',
+  `update_user` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '修改用户',
+  `delete_flag` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NOT_DELETE' COMMENT '逻辑删除标志（NOT_DELETE：未删除，DELETED：已删除）',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_outbox_dispatch`(`status` ASC, `delete_flag` ASC, `next_retry_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '事务出站事件表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for undo_log
