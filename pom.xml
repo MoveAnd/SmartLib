@@ -214,6 +214,11 @@
                 <artifactId>smartlib-idempotent</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>vip.xiaonuo</groupId>
+                <artifactId>smartlib-outbox</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- snowy-common -->
             <dependency>

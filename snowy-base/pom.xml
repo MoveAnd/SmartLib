@@ -20,6 +20,7 @@
         <module>snowy-common</module>
         <module>smartlib-seata</module>
         <module>smartlib-idempotent</module>
+        <module>smartlib-outbox</module>
     </modules>
 
 </project>
