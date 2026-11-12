@@ -44,3 +44,6 @@ tmp/
 
 # Local DSH sandbox ACL diagnosis/repair artifacts
 /dsh-acl-recovery/
+
+# Admin frontend
+/snowy-admin-web/
