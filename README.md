@@ -19,12 +19,6 @@ SmartLib 是基于 Snowy-Cloud 开发的图书馆管理系统，后端分为Web�
 <details>
 <summary>查看上游框架介绍、启动说明和示例</summary>
 
-<div align="center">
-    <p align="center">
-        <img src="./snowy-admin-web/public/img/logo.png" height="150" alt="logo"/>
-    </p>
-</div>
-
 ## 框架介绍
 
 Snowy-Cloud（SnowyAdmin微服务版）是国内首个国密前后端分离快速开发平台，集成国密加解密插件，
