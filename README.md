@@ -1,3 +1,24 @@
+# SmartLib 智慧图书馆
+
+SmartLib 是基于 Snowy-Cloud 开发的图书馆管理系统，后端分为Web服务、图书服务和借阅服务，面向读者提供书目查询、借阅和收藏功能，面向管理员提供出版版本、馆藏库存和借阅记录管理。
+
+## 主要功能
+
+- **图书服务**提供作品、作者和出版版本查询，支持 ISBN 检索、馆藏库存管理、读者收藏和收藏 TOP 10 榜单。
+- **借阅服务**支持批量借阅、借阅名额管理、归还申请与确认，以及借阅 TOP 10 榜单。
+
+## 技术栈
+
+- **后端**采用 Java 17、Spring Boot 3 和 Spring Cloud。使用 Nacos 做服务注册与配置管理，OpenFeign 做服务间调用，Sa-Token 做认证。
+- **数据与中间件**包括 MySQL 和 MyBatis-Plus（数据持久化）、Redis 和 Redisson（缓存、排行榜与分布式锁）、Seata（跨服务事务）、RocketMQ（消息投递）以及 XXL-JOB（定时刷新榜单）。
+
+图书和借阅应用分别位于 [`smartlib-book-app`](snowy-modules/smartlib-book-app) 与 [`smartlib-borrow-app`](snowy-modules/smartlib-borrow-app)，数据库初始化脚本见 [`docs/sql`](docs/sql)。
+
+## 上游项目 Snowy-Cloud
+
+<details>
+<summary>查看上游框架介绍、启动说明和示例</summary>
+
 <div align="center">
     <p align="center">
         <img src="./snowy-admin-web/public/img/logo.png" height="150" alt="logo"/>
@@ -385,6 +406,8 @@ QQ技术群：732230670（已满）、685395081
         <td style="width: 50%"><img src="https://pan.xiaonuo.vip/?explorer/share/file&hash=d7cfk0ftuw2tl1bAL42bl2wgk7sgcm-Z4ULwZu5TIjp4zsvmKBkYfGIoY48Buc4H0s0"/></td>
     </tr>
 </table>
+
+</details>
 
 ## 版权说明
 
